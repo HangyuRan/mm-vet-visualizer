@@ -14,7 +14,7 @@
 <body class="bg-gray-50 text-gray-900">
 <header class="bg-indigo-600 text-white p-6 shadow-lg">
   <h1 class="text-3xl font-semibold">MM‑Vet Benchmark Visualizer</h1>
-  <p class="opacity-90">原图与三种API生成的SVG2Img对比，可切换 <b>Qwen‑2.5‑VL 7B / 3B</b>。</p>
+  <p class="opacity-90">原始与三种合成图对比，可切换 <b>Qwen‑2.5‑VL 7B / 3B</b>。</p>
 </header>
 
 <section class="px-6 max-w-screen-2xl mx-auto my-4 flex flex-wrap gap-4 items-center">
@@ -44,7 +44,7 @@
 </div>
 
 <script>
-/* ========== CONFIG ========== */
+/* ========== CONFIG (使用您提供的原始本地路径) ========== */
 const DATA_JSON  = 'mm-vet.json';
 const PRED_SET   = {
   '7B': {orig:'pred_original_7B.json', cla:'pred_claude_7B.json', gem:'pred_gemini_7B.json', qwn:'pred_qwen_7B.json'},
@@ -68,24 +68,29 @@ function modal(title, html){
   document.body.appendChild(bg);
 }
 
-/* ========== BUILD CELLS ========== */
+/* ========== BUILD CELLS (核心修改区域) ========== */
+// 用于 Question 和 Answer 的可点击文本单元格
 function clipCell(text, label){
   const td = document.createElement('td');
   td.textContent = text;
   td.className   = 'p-3 clip-text';
-  td.addEventListener('click', ()=> modal(label, `<p>${text}</p>`));
+  td.addEventListener('click', ()=> modal(label, `<p class="whitespace-pre-wrap">${text}</p>`));
   return td;
 }
+
+// 用于分数的单元格 (逻辑和您原来的一样)
 function scoreCell(score, pred){
   const td = document.createElement('td');
   td.textContent = score ?? '—';
   td.className   = 'p-3 text-center cursor-pointer';
-  td.addEventListener('click', ()=> modal('Prediction', `<p>${pred ?? '—'}</p>`));
+  td.addEventListener('click', ()=> modal('Prediction', `<p class="whitespace-pre-wrap">${pred ?? '—'}</p>`));
   if(score==1||score==='1.0') td.classList.add('bg-emerald-100');
   else if(score==0||score==='0.0') td.classList.add('bg-rose-100');
   else td.classList.add('text-gray-400');
   return td;
 }
+
+// 用于图片的单元格
 function imgCell(src){
   const td = document.createElement('td');
   td.innerHTML = `<img src="${src}" class="w-24 rounded shadow cursor-pointer">`;
@@ -93,7 +98,7 @@ function imgCell(src){
   return td;
 }
 
-/* ========== DATA LOAD & RENDER ========== */
+/* ========== DATA LOAD & RENDER (核心修改区域) ========== */
 async function loadAll(){
   const tag  = document.getElementById('modelSel').value;
   const meta = await fetchJSON(DATA_JSON);
@@ -102,6 +107,8 @@ async function loadAll(){
   await Promise.all(Object.entries(SCORE_SET[tag]).map(async([k,p])=> scores[k] = await fetchJSON(p)));
   render(meta, preds, scores);
 }
+
+// 使用新的辅助函数来构建表格行
 function render(meta, preds, scores){
   const tb = document.getElementById('dataBody');
   tb.innerHTML='';
@@ -111,11 +118,19 @@ function render(meta, preds, scores){
     tr.dataset.cls = d.capability.join(',');
 
     tr.innerHTML = `<td class='p-3 text-center'>${++idx}</td>`;
+    
+    // 使用 imgCell 辅助函数添加四个图片单元格
     ['orig','cla','gem','qwn'].forEach(key=> tr.appendChild(imgCell(IMG_DIR[key]+d.imagename)) );
+    
+    // 使用 clipCell 辅助函数添加 Question 和 Answer 单元格
     tr.appendChild(clipCell(d.question,'Question'));
     tr.appendChild(clipCell(d.answer,'Answer'));
+    
     tr.innerHTML += `<td class='p-3'>${d.capability.join(', ')}</td>`;
+    
+    // 使用 scoreCell 辅助函数添加四个分数单元格
     ['orig','cla','gem','qwn'].forEach(k=> tr.appendChild( scoreCell(scores[k][id]?.score?.[0], preds[k][id]) ));
+    
     tb.appendChild(tr);
   }
   filterRows();
