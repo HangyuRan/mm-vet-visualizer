@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MM‑Vet Visualizer – Qwen 7B vs 3B</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>function filterRows(){const cls=document.getElementById('capabilityFilter').value,kw=document.getElementById('searchInput').value.toLowerCase();document.querySelectorAll('#dataBody tr').forEach(tr=>{const okCls='all'===cls||tr.dataset.cls.includes(cls),okKw=tr.innerText.toLowerCase().includes(kw);tr.style.display=okCls&&okKw?'':'none'})}</script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+<header class="bg-indigo-600 text-white p-6 shadow-lg">
+ <h1 class="text-3xl font-semibold">MM‑Vet Benchmark Visualizer</h1>
+ <p class="opacity-90">对比 <b>原始图像</b> 与三种 SVG→PNG 合成图，并切换 <b>Qwen‑2.5‑VL 7B / 3B</b> 两个模型的预测结果。</p>
+</header>
+<main class="px-6 max-w-screen-2xl mx-auto">
+  <div class="flex flex-wrap gap-4 items-center my-4">
+    <label class="font-semibold">Model:</label>
+    <select id="modelSel" onchange="loadAll()" class="p-2 border rounded-md">
+      <option value="7B">Qwen 2.5‑VL 7B</option>
+      <option value="3B">Qwen 2.5‑VL 3B</option>
+    </select>
+    <input id="searchInput" oninput="filterRows()" placeholder="Search …" class="flex-1 p-2 border rounded-md" />
+    <select id="capabilityFilter" onchange="filterRows()" class="p-2 border rounded-md">
+      <option value="all">All capabilities</option>
+      <option value="ocr">OCR</option><option value="math">Math</option><option value="spat">Spatial</option><option value="rec">Recognition</option><option value="know">Knowledge</option><option value="gen">Generation</option>
+    </select>
+  </div>
+  <div class="overflow-x-auto ring-1 ring-gray-200 rounded-xl shadow">
+    <table class="min-w-full text-sm whitespace-nowrap">
+      <thead class="bg-gray-100 font-semibold">
+        <tr><th class="p-3">#</th><th class="p-3">Orig</th><th class="p-3">Claude</th><th class="p-3">Gemini</th><th class="p-3">Qwen 72B</th><th class="p-3">Question</th><th class="p-3">GT</th><th class="p-3">Caps</th><th class="p-3">Pred‑Orig</th><th class="p-3">Pred‑Claude</th><th class="p-3">Pred‑Gemini</th><th class="p-3">Pred‑Qwen</th></tr>
+      </thead>
+      <tbody id="dataBody" class="divide-y divide-gray-200 bg-white"></tbody>
+    </table>
+  </div>
+</main>
+<script>
+/* === CONFIG === */
+const DATA_JSON='mm-vet.json';
+const PRED_SET={
+  '7B':{original:'pred_original_7B.json',claude:'pred_claude_7B.json',gemini:'pred_gemini_7B.json',qwen:'pred_qwen_7B.json'},
+  '3B':{original:'pred_original_3B.json',claude:'pred_claude_3B.json',gemini:'pred_gemini_3B.json',qwen:'pred_qwen_3B.json'}
+};
+const IMG_DIRS={original:'images/',claude:'images_claude/',gemini:'images_gemini/',qwen:'images_qwen/'};
+/* === LOAD & RENDER === */
+async function loadAll(){
+  const tag=document.getElementById('modelSel').value;
+  const meta=await fetch(DATA_JSON).then(r=>r.json());
+  const preds={};await Promise.all(Object.entries(PRED_SET[tag]).map(async([k,p])=>{preds[k]=await fetch(p).then(r=>r.json()).catch(()=>({}));}));
+  render(meta,preds);
+}
+function predCell(pred,gt){const td=document.createElement('td');td.textContent=pred??'—';td.className='p-3 text-center';if(!pred)td.classList.add('text-gray-400');else if(gt.toLowerCase().includes(pred.toLowerCase()))td.classList.add('bg-emerald-50');else td.classList.add('bg-rose-50');return td;}
+function render(meta,preds){const tb=document.getElementById('dataBody');tb.innerHTML='';let i=0;for(const[id,d]of Object.entries(meta)){const tr=document.createElement('tr');tr.dataset.cls=d.capability.join(',');tr.innerHTML=`<td class='p-3 text-center'>${++i}</td><td class='p-3'><img class='w-28 rounded' src='${IMG_DIRS.original+d.imagename}'></td><td class='p-3'><img class='w-28 rounded' src='${IMG_DIRS.claude+d.imagename}'></td><td class='p-3'><img class='w-28 rounded' src='${IMG_DIRS.gemini+d.imagename}'></td><td class='p-3'><img class='w-28 rounded' src='${IMG_DIRS.qwen+d.imagename}'></td><td class='p-3 max-w-xs'>${d.question}</td><td class='p-3'>${d.answer}</td><td class='p-3'>${d.capability.join(', ')}</td>`;tr.appendChild(predCell(preds.original[id],d.answer));tr.appendChild(predCell(preds.claude[id],d.answer));tr.appendChild(predCell(preds.gemini[id],d.answer));tr.appendChild(predCell(preds.qwen[id],d.answer));tb.appendChild(tr);}filterRows();}
+/* init */loadAll();
+</script>
+</body>
+</html>
