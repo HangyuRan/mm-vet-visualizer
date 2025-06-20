@@ -47,12 +47,12 @@
 /* ========== CONFIG ========== */
 const DATA_JSON  = 'mm-vet.json';
 const PRED_SET   = {
-  '7B': {orig:'pred_original_7B.json', cla:'pred_claude_7B.json', gem:'pred_gemini_7B.json', qwn:'pred_qwen_7B.json'},
-  '3B': {orig:'pred_original_3B.json', cla:'pred_claude_3B.json', gem:'pred_gemini_3B.json', qwn:'pred_qwen_3B.json'}
+  '7B': {orig:'prediction/pred_original_7B.json', cla:'prediction/pred_claude_7B.json', gem:'prediction/pred_gemini_7B.json', qwn:'prediction/pred_qwen_7B.json'},
+  '3B': {orig:'prediction/pred_original_3B.json', cla:'prediction/pred_claude_3B.json', gem:'prediction/pred_gemini_3B.json', qwn:'prediction/pred_qwen_3B.json'}
 };
 const SCORE_SET  = {
-  '7B': {orig:'score_original_7B.json', cla:'score_claude_7B.json', gem:'score_gemini_7B.json', qwn:'score_qwen_7B.json'},
-  '3B': {orig:'score_original_3B.json', cla:'score_claude_3B.json', gem:'score_gemini_3B.json', qwn:'score_qwen_3B.json'}
+  '7B': {orig:'score/score_original_7B.json', cla:'score/score_claude_7B.json', gem:'score/score_gemini_7B.json', qwn:'score/score_qwen_7B.json'},
+  '3B': {orig:'score/score_original_3B.json', cla:'score/score_claude_3B.json', gem:'score/score_gemini_3B.json', qwn:'score/score_qwen_3B.json'}
 };
 const IMG_DIR = {orig:'images/', cla:'images_claude/', gem:'images_gemini/', qwn:'images_qwen/'};
 const fetchJSON = p => fetch(p).then(r=>r.json()).catch(()=>({}));
