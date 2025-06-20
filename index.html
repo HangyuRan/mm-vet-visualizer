@@ -3,75 +3,141 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MM‑Vet Visualizer – Qwen 7B / 3B</title>
+<title>MM‑Vet Visualizer – Qwen 7B / 3B</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  /* truncate & pointer */
   .clip-text{max-width:22rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
-  /* modal backdrop */
   .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50}
-  /* scroll wrapper: vertical page scroll, horizontal table scroll */
   .table-wrap{overflow-x:auto}
-  /* sticky table header */
-   /* 8rem ≈ nav+filter height */
 </style>
-<script>
-const DATA_JSON='mm-vet.json';
-const PRED_SET={
-  '7B':{orig:'pred_original_7B.json',cla:'pred_claude_7B.json',gem:'pred_gemini_7B.json',qwn:'pred_qwen_7B.json'},
-  '3B':{orig:'pred_original_3B.json',cla:'pred_claude_3B.json',gem:'pred_gemini_3B.json',qwn:'pred_qwen_3B.json'}
-};
-const SCORE_SET={
-  '7B':{orig:'score_original_7B.json',cla:'score_claude_7B.json',gem:'score_gemini_7B.json',qwn:'score_qwen_7B.json'},
-  '3B':{orig:'score_original_3B.json',cla:'score_claude_3B.json',gem:'score_gemini_3B.json',qwn:'score_qwen_3B.json'}
-};
-const IMG_DIR={orig:'images/',cla:'images_claude/',gem:'images_gemini/',qwn:'images_qwen/'};
-const fetchJSON=p=>fetch(p).then(r=>r.json()).catch(()=>({}));
-/* ---------- helpers ---------- */
-function showModal(title,html){const bg=document.createElement('div');bg.className='modal-bg';bg.innerHTML=`<div class='bg-white rounded-xl p-6 max-h-[90vh] max-w-[90vw] overflow-auto shadow-xl'><h2 class='font-semibold mb-3'>${title}</h2>${html}<div class='text-right mt-5'><button onclick='this.closest(".modal-bg").remove()' class='px-4 py-1 bg-indigo-600 text-white rounded'>Close</button></div></div>`;document.body.appendChild(bg)}
-const clipCell=(txt,label)=>{const td=document.createElement('td');td.textContent=txt;td.className='p-3 clip-text';td.onclick=()=>showModal(label,`<p>${txt}</p>`);return td};
-function scoreCell(s, pred){const td=document.createElement('td');td.textContent=s??'—';td.className='p-3 text-center cursor-pointer';td.onclick=()=>showModal('Prediction',`<p>${pred??'—'}</p>`);
-  if(s==1||s=='1.0')td.classList.add('bg-emerald-100');else if(s==0||s=='0.0')td.classList.add('bg-rose-100');else td.classList.add('text-gray-400');return td}
-function imgCell(src){return `<td class='p-3'><img src='${src}' class='w-24 rounded shadow cursor-pointer' onclick="showModal('Image', '<img src=\'${src}\' class=\'max-w-full h-auto rounded\'>')"></td>`}
-function filterRows(){const cap=document.getElementById('capabilityFilter').value,kw=document.getElementById('searchInput').value.toLowerCase();document.querySelectorAll('#dataBody tr').forEach(tr=>{const okCap=cap==='all'||tr.dataset.cls.includes(cap);const okKw=tr.innerText.toLowerCase().includes(kw);tr.style.display=okCap&&okKw?'':'none'})}
-/* ---------- load ---------- */
-async function loadAll(){const tag=document.getElementById('modelSel').value;const meta=await fetchJSON(DATA_JSON);
-  const [preds,scores] = await Promise.all([
-    Promise.all(Object.entries(PRED_SET[tag]).map(([k,p])=>fetchJSON(p))).then(r=>Object.fromEntries(Object.keys(PRED_SET[tag]).map((k,i)=>[k,r[i]]))),
-    Promise.all(Object.entries(SCORE_SET[tag]).map(([k,p])=>fetchJSON(p))).then(r=>Object.fromEntries(Object.keys(SCORE_SET[tag]).map((k,i)=>[k,r[i]])))
-  ]);
-  render(meta,preds,scores);
-}
-function render(meta,preds,scores){const tb=document.getElementById('dataBody');tb.innerHTML='';let i=0;for(const[id,d] of Object.entries(meta)){
-  const tr=document.createElement('tr');tr.dataset.cls=d.capability.join(',');tr.innerHTML=`<td class='p-3 text-center'>${++i}</td>`+
-    imgCell(IMG_DIR.orig+d.imagename)+imgCell(IMG_DIR.cla+d.imagename)+imgCell(IMG_DIR.gem+d.imagename)+imgCell(IMG_DIR.qwn+d.imagename);
-  tr.appendChild(clipCell(d.question,'Question'));tr.appendChild(clipCell(d.answer,'Answer'));
-  tr.innerHTML+=`<td class='p-3'>${d.capability.join(', ')}</td>`;
-  ['orig','cla','gem','qwn'].forEach(k=>tr.appendChild(scoreCell(scores[k][id]?.score?.[0], preds[k][id])));
-  tb.appendChild(tr);
-}
-filterRows();}
-</script>
 </head>
 <body class="bg-gray-50 text-gray-900">
 <header class="bg-indigo-600 text-white p-6 shadow-lg">
   <h1 class="text-3xl font-semibold">MM‑Vet Benchmark Visualizer</h1>
-  <p class="opacity-90">原始和三种合成图对比，可切换 <b>Qwen‑2.5‑VL 7B / 3B</b>；表头固定，可横向滚动。</p>
+  <p class="opacity-90">原图与三种API生成的SVG2Img对比，可切换 <b>Qwen‑2.5‑VL 7B / 3B</b>。</p>
 </header>
+
 <section class="px-6 max-w-screen-2xl mx-auto my-4 flex flex-wrap gap-4 items-center">
   <label class="font-semibold">Model:</label>
-  <select id="modelSel" onchange="loadAll()" class="p-2 border rounded-md"><option value="7B">Qwen 7B</option><option value="3B">Qwen 3B</option></select>
-  <input id="searchInput" placeholder="Search …" oninput="filterRows()" class="flex-1 p-2 border rounded-md"/>
-  <select id="capabilityFilter" onchange="filterRows()" class="p-2 border rounded-md"><option value="all">All caps</option><option value="ocr">OCR</option><option value="math">Math</option><option value="spat">Spatial</option><option value="rec">Recognition</option><option value="know">Knowledge</option><option value="gen">Generation</option></select>
+  <select id="modelSel" class="p-2 border rounded-md">
+    <option value="7B">Qwen 7B</option>
+    <option value="3B">Qwen 3B</option>
+  </select>
+  <input id="searchInput" placeholder="Search …" class="flex-1 p-2 border rounded-md"/>
+  <select id="capabilityFilter" class="p-2 border rounded-md">
+    <option value="all">All caps</option>
+    <option value="ocr">OCR</option><option value="math">Math</option><option value="spat">Spatial</option><option value="rec">Recognition</option><option value="know">Knowledge</option><option value="gen">Generation</option>
+  </select>
 </section>
+
 <div class="table-wrap px-6 max-w-screen-2xl mx-auto ring-1 ring-gray-200 rounded-xl shadow mb-10">
   <table class="min-w-full text-xs whitespace-nowrap">
     <thead class="bg-gray-100 font-semibold">
-      <tr><th class="p-3">#</th><th class="p-3">Orig</th><th class="p-3">Claude</th><th class="p-3">Gemini</th><th class="p-3">Qwen72B</th><th class="p-3">Question</th><th class="p-3">Answer</th><th class="p-3">Caps</th><th class="p-3">S‑Orig</th><th class="p-3">S‑Cla</th><th class="p-3">S‑Gem</th><th class="p-3">S‑Qwn</th></tr>
+      <tr>
+        <th class="p-3">#</th><th class="p-3">Orig</th><th class="p-3">Claude</th><th class="p-3">Gemini</th><th class="p-3">Qwen72B</th>
+        <th class="p-3">Question</th><th class="p-3">Answer</th><th class="p-3">Caps</th>
+        <th class="p-3">S‑Orig</th><th class="p-3">S‑Cla</th><th class="p-3">S‑Gem</th><th class="p-3">S‑Qwn</th>
+      </tr>
     </thead>
     <tbody id="dataBody" class="divide-y divide-gray-200 bg-white"></tbody>
   </table>
 </div>
-<script>loadAll();</script>
+
+<script>
+/* ========== CONFIG ========== */
+const DATA_JSON  = 'mm-vet.json';
+const PRED_SET   = {
+  '7B': {orig:'pred_original_7B.json', cla:'pred_claude_7B.json', gem:'pred_gemini_7B.json', qwn:'pred_qwen_7B.json'},
+  '3B': {orig:'pred_original_3B.json', cla:'pred_claude_3B.json', gem:'pred_gemini_3B.json', qwn:'pred_qwen_3B.json'}
+};
+const SCORE_SET  = {
+  '7B': {orig:'score_original_7B.json', cla:'score_claude_7B.json', gem:'score_gemini_7B.json', qwn:'score_qwen_7B.json'},
+  '3B': {orig:'score_original_3B.json', cla:'score_claude_3B.json', gem:'score_gemini_3B.json', qwn:'score_qwen_3B.json'}
+};
+const IMG_DIR = {orig:'images/', cla:'images_claude/', gem:'images_gemini/', qwn:'images_qwen/'};
+const fetchJSON = p => fetch(p).then(r=>r.json()).catch(()=>({}));
+
+/* ========== MODAL ========== */
+function modal(title, html){
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = `<div class='bg-white rounded-xl p-6 max-h-[90vh] max-w-[90vw] overflow-auto shadow-xl'>
+     <h2 class='font-semibold mb-4'>${title}</h2>${html}
+     <div class='text-right mt-6'><button class='px-4 py-1 bg-indigo-600 text-white rounded' onclick='this.closest(".modal-bg").remove()'>Close</button></div>
+   </div>`;
+  document.body.appendChild(bg);
+}
+
+/* ========== BUILD CELLS ========== */
+function clipCell(text, label){
+  const td = document.createElement('td');
+  td.textContent = text;
+  td.className   = 'p-3 clip-text';
+  td.addEventListener('click', ()=> modal(label, `<p>${text}</p>`));
+  return td;
+}
+function scoreCell(score, pred){
+  const td = document.createElement('td');
+  td.textContent = score ?? '—';
+  td.className   = 'p-3 text-center cursor-pointer';
+  td.addEventListener('click', ()=> modal('Prediction', `<p>${pred ?? '—'}</p>`));
+  if(score==1||score==='1.0') td.classList.add('bg-emerald-100');
+  else if(score==0||score==='0.0') td.classList.add('bg-rose-100');
+  else td.classList.add('text-gray-400');
+  return td;
+}
+function imgCell(src){
+  const td = document.createElement('td');
+  td.innerHTML = `<img src="${src}" class="w-24 rounded shadow cursor-pointer">`;
+  td.firstChild.addEventListener('click', ()=> modal('Image', `<img src='${src}' class='max-w-full h-auto rounded'>`));
+  return td;
+}
+
+/* ========== DATA LOAD & RENDER ========== */
+async function loadAll(){
+  const tag  = document.getElementById('modelSel').value;
+  const meta = await fetchJSON(DATA_JSON);
+  const preds  = {}, scores = {};
+  await Promise.all(Object.entries(PRED_SET[tag]).map(async([k,p])=> preds[k]  = await fetchJSON(p)));
+  await Promise.all(Object.entries(SCORE_SET[tag]).map(async([k,p])=> scores[k] = await fetchJSON(p)));
+  render(meta, preds, scores);
+}
+function render(meta, preds, scores){
+  const tb = document.getElementById('dataBody');
+  tb.innerHTML='';
+  let idx=0;
+  for(const [id,d] of Object.entries(meta)){
+    const tr = document.createElement('tr');
+    tr.dataset.cls = d.capability.join(',');
+
+    tr.innerHTML = `<td class='p-3 text-center'>${++idx}</td>`;
+    ['orig','cla','gem','qwn'].forEach(key=> tr.appendChild(imgCell(IMG_DIR[key]+d.imagename)) );
+    tr.appendChild(clipCell(d.question,'Question'));
+    tr.appendChild(clipCell(d.answer,'Answer'));
+    tr.innerHTML += `<td class='p-3'>${d.capability.join(', ')}</td>`;
+    ['orig','cla','gem','qwn'].forEach(k=> tr.appendChild( scoreCell(scores[k][id]?.score?.[0], preds[k][id]) ));
+    tb.appendChild(tr);
+  }
+  filterRows();
+}
+
+/* ========== FILTER & EVENTS ========== */
+function filterRows(){
+  const cap = document.getElementById('capabilityFilter').value;
+  const kw  = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('#dataBody tr').forEach(tr=>{
+    const okCap = cap==='all' || tr.dataset.cls.includes(cap);
+    const okKw  = tr.innerText.toLowerCase().includes(kw);
+    tr.style.display = (okCap && okKw) ? '' : 'none';
+  });
+}
+
+document.getElementById('modelSel').addEventListener('change', loadAll);
+document.getElementById('searchInput').addEventListener('input', filterRows);
+document.getElementById('capabilityFilter').addEventListener('change', filterRows);
+
+/* init */
+loadAll();
+</script>
 </body>
 </html>
