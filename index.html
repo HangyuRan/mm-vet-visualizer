@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MM‑Vet Visualizer – Qwen 7B / 3B</title>
+<title>MM‑Vet Visualizer – Qwen / GPT-4o</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   .clip-text{max-width:22rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
@@ -14,7 +14,7 @@
 <body class="bg-gray-50 text-gray-900">
 <header class="bg-indigo-600 text-white p-6 shadow-lg">
   <h1 class="text-3xl font-semibold">MM‑Vet Benchmark Visualizer</h1>
-  <p class="opacity-90">原始与三种合成图对比，可切换 <b>Qwen‑2.5‑VL 7B / 3B</b>。</p>
+  <p class="opacity-90">原始与四种合成图对比，可切换 <b>Qwen‑2.5‑VL 7B / 3B</b>。</p>
 </header>
 
 <section class="px-6 max-w-screen-2xl mx-auto my-4 flex flex-wrap gap-4 items-center">
@@ -34,9 +34,10 @@
   <table class="min-w-full text-xs whitespace-nowrap">
     <thead class="bg-gray-100 font-semibold">
       <tr>
-        <th class="p-3">#</th><th class="p-3">Orig</th><th class="p-3">Claude</th><th class="p-3">Gemini</th><th class="p-3">Qwen72B</th>
+        <!-- 1. 修改表头: 增加了 GPT-4o 和 S-G4o -->
+        <th class="p-3">#</th><th class="p-3">Orig</th><th class="p-3">Claude</th><th class="p-3">Gemini</th><th class="p-3">Qwen72B</th><th class="p-3">GPT-4o</th>
         <th class="p-3">Question</th><th class="p-3">Answer</th><th class="p-3">Caps</th>
-        <th class="p-3">S‑Orig</th><th class="p-3">S‑Cla</th><th class="p-3">S‑Gem</th><th class="p-3">S‑Qwn</th>
+        <th class="p-3">S‑Orig</th><th class="p-3">S‑Cla</th><th class="p-3">S‑Gem</th><th class="p-3">S‑Qwn</th><th class="p-3">S‑G4o</th>
       </tr>
     </thead>
     <tbody id="dataBody" class="divide-y divide-gray-200 bg-white"></tbody>
@@ -44,17 +45,22 @@
 </div>
 
 <script>
-/* ========== CONFIG ========== */
+/* ========== CONFIG (2. 修改配置) ========== */
 const DATA_JSON  = 'mm-vet.json';
+
+// 在 '7B' 和 '3B' 中都增加了 g4o 的条目
 const PRED_SET   = {
-  '7B': {orig:'prediction/pred_original_7B.json', cla:'prediction/pred_claude_7B.json', gem:'prediction/pred_gemini_7B.json', qwn:'prediction/pred_qwen_7B.json'},
-  '3B': {orig:'prediction/pred_original_3B.json', cla:'prediction/pred_claude_3B.json', gem:'prediction/pred_gemini_3B.json', qwn:'prediction/pred_qwen_3B.json'}
+  '7B': {orig:'prediction/pred_original_7B.json', cla:'prediction/pred_claude_7B.json', gem:'prediction/pred_gemini_7B.json', qwn:'prediction/pred_qwen_7B.json', g4o:'prediction/pred_gpt_7B.json'},
+  '3B': {orig:'prediction/pred_original_3B.json', cla:'prediction/pred_claude_3B.json', gem:'prediction/pred_gemini_3B.json', qwn:'prediction/pred_qwen_3B.json', g4o:'prediction/pred_gpt_3B.json'}
 };
+// 在 '7B' 和 '3B' 中都增加了 g4o 的条目
 const SCORE_SET  = {
-  '7B': {orig:'score/score_original_7B.json', cla:'score/score_claude_7B.json', gem:'score/score_gemini_7B.json', qwn:'score/score_qwen_7B.json'},
-  '3B': {orig:'score/score_original_3B.json', cla:'score/score_claude_3B.json', gem:'score/score_gemini_3B.json', qwn:'score/score_qwen_3B.json'}
+  '7B': {orig:'score/score_original_7B.json', cla:'score/score_claude_7B.json', gem:'score/score_gemini_7B.json', qwn:'score/score_qwen_7B.json', g4o:'score/score_gpt_7B.json'},
+  '3B': {orig:'score/score_original_3B.json', cla:'score/score_claude_3B.json', gem:'score/score_gemini_3B.json', qwn:'score/score_qwen_3B.json', g4o:'score/score_gpt_3B.json'}
 };
-const IMG_DIR = {orig:'images/', cla:'images_claude/', gem:'images_gemini/', qwn:'images_qwen/'};
+// 增加了 g4o 图片的目录
+const IMG_DIR = {orig:'images/', cla:'images_claude/', gem:'images_gemini/', qwn:'images_qwen/', g4o:'images_gpt/'};
+
 const fetchJSON = p => fetch(p).then(r=>r.json()).catch(()=>({}));
 
 /* ========== MODAL ========== */
@@ -93,7 +99,7 @@ function imgCell(src){
   return td;
 }
 
-/* ========== DATA LOAD & RENDER (已彻底修复) ========== */
+/* ========== DATA LOAD & RENDER ========== */
 async function loadAll(){
   const tag  = document.getElementById('modelSel').value;
   const meta = await fetchJSON(DATA_JSON);
@@ -107,35 +113,32 @@ function render(meta, preds, scores){
   const tb = document.getElementById('dataBody');
   tb.innerHTML='';
   let idx=0;
+  // 3. 修改渲染循环: 在循环数组中增加了 'g4o'
+  const imageTypes = ['orig', 'cla', 'gem', 'qwn', 'g4o'];
+
   for(const [id,d] of Object.entries(meta)){
     const tr = document.createElement('tr');
     tr.dataset.cls = d.capability.join(',');
 
-    // --- 按顺序创建并添加每一个单元格，全程只用 appendChild ---
-
-    // 1. 序号列
     const idxCell = document.createElement('td');
     idxCell.className = 'p-3 text-center';
     idxCell.textContent = ++idx;
     tr.appendChild(idxCell);
     
-    // 2. 图片列 (带点击功能)
-    ['orig','cla','gem','qwn'].forEach(key=> tr.appendChild(imgCell(IMG_DIR[key]+d.imagename)) );
+    // 图片列 (现在会循环5次)
+    imageTypes.forEach(key=> tr.appendChild(imgCell(IMG_DIR[key]+d.imagename)) );
     
-    // 3. 问题/答案列 (带点击功能)
     tr.appendChild(clipCell(d.question,'Question'));
     tr.appendChild(clipCell(d.answer,'Answer'));
     
-    // 4. Caps 列 (普通文本)
     const capsCell = document.createElement('td');
     capsCell.className = 'p-3';
     capsCell.textContent = d.capability.join(', ');
     tr.appendChild(capsCell);
 
-    // 5. 分数列 (带点击功能)
-    ['orig','cla','gem','qwn'].forEach(k=> tr.appendChild( scoreCell(scores[k][id]?.score?.[0], preds[k][id]) ));
+    // 分数列 (现在会循环5次)
+    imageTypes.forEach(k=> tr.appendChild( scoreCell(scores[k][id]?.score?.[0], preds[k][id]) ));
     
-    // 最后，将构建好的、功能完整的 tr 添加到表格
     tb.appendChild(tr);
   }
   filterRows();
