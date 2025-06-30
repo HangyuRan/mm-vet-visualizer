@@ -19,10 +19,9 @@
 
 <section class="px-6 max-w-screen-2xl mx-auto my-4 flex flex-wrap gap-4 items-center">
   <label class="font-semibold">Model:</label>
-  <!-- 1. HTML界面更新: 增加了 gpt4o-mini 选项，并修改了 value 以匹配文件夹名 -->
   <select id="modelSel" class="p-2 border rounded-md">
-    <option value="qwen7b">Qwen2.5-VL-7B</option>
-    <option value="qwen3b">Qwen2.5-VL-3B</option>
+    <option value="qwen7b">Qwen 7B</option>
+    <option value="qwen3b">Qwen 3B</option>
     <option value="gpt4o-mini">GPT-4o-mini</option>
   </select>
   <input id="searchInput" placeholder="Search …" class="flex-1 p-2 border rounded-md"/>
@@ -50,6 +49,58 @@
 const DATA_JSON  = 'mm-vet.json';
 const IMG_DIR = {orig:'images/', cla:'images_claude/', gem:'images_gemini/', qwn:'images_qwen/', gpt:'images_gpt/'};
 const IMAGE_TYPES = ['orig', 'cla', 'gem', 'qwn', 'gpt'];
+
+const DATA_PATHS = {
+  'qwen7b': {
+    preds: {
+      orig: 'prediction/qwen7b/pred_original.json',
+      cla:  'prediction/qwen7b/pred_claude.json',
+      gem:  'prediction/qwen7b/pred_gemini.json',
+      qwn:  'prediction/qwen7b/pred_qwen.json',
+      gpt:  'prediction/qwen7b/pred_gpt.json'
+    },
+    scores: {
+      orig: 'score/qwen7b/score_original.json',
+      cla:  'score/qwen7b/score_claude.json',
+      gem:  'score/qwen7b/score_gemini.json',
+      qwn:  'score/qwen7b/score_qwen.json',
+      gpt:  'score/qwen7b/score_gpt.json'
+    }
+  },
+  'qwen3b': {
+    preds: {
+      orig: 'prediction/qwen3b/pred_original.json',
+      cla:  'prediction/qwen3b/pred_claude.json',
+      gem:  'prediction/qwen3b/pred_gemini.json',
+      qwn:  'prediction/qwen3b/pred_qwen.json',
+      gpt:  'prediction/qwen3b/pred_gpt.json'
+    },
+    scores: {
+      orig: 'score/qwen3b/score_original.json',
+      cla:  'score/qwen3b/score_claude.json',
+      gem:  'score/qwen3b/score_gemini.json',
+      qwn:  'score/qwen3b/score_qwen.json',
+      gpt:  'score/qwen3b/score_gpt.json'
+    }
+  },
+  'gpt4o-mini': {
+    preds: {
+      orig: 'prediction/gpt4o-mini/pred_original.json',
+      cla:  'prediction/gpt4o-mini/pred_claude.json',
+      gem:  'prediction/gpt4o-mini/pred_gemini.json',
+      qwn:  'prediction/gpt4o-mini/pred_qwen.json',
+      gpt:  'prediction/gpt4o-mini/pred_gpt.json'
+    },
+    scores: {
+      orig: 'score/gpt4o-mini/score_original.json',
+      cla:  'score/gpt4o-mini/score_claude.json',
+      gem:  'score/gpt4o-mini/score_gemini.json',
+      qwn:  'score/gpt4o-mini/score_qwen.json',
+      gpt:  'score/gpt4o-mini/score_gpt.json'
+    }
+  }
+};
+
 const fetchJSON = p => fetch(p).then(r=>r.json()).catch(()=>({}));
 
 /* ========== MODAL ========== */
@@ -88,31 +139,30 @@ function imgCell(src){
   return td;
 }
 
-/* ========== DATA LOAD & RENDER (2. JS逻辑重构) ========== */
+/* ========== DATA LOAD & RENDER ========== */
 async function loadAll(){
-  const modelKey = document.getElementById('modelSel').value; // e.g., 'qwen7b', 'gpt4o-mini'
-  
-  // PRED_SET 和 SCORE_SET 已被移除，现在动态生成加载列表
+  const modelKey = document.getElementById('modelSel').value;
+  const modelDataPaths = DATA_PATHS[modelKey];
+
+  if (!modelDataPaths) {
+    console.error('错误: 没有为模型 ' + modelKey + ' 定义数据路径。');
+    document.getElementById('dataBody').innerHTML = `<tr><td colspan="15" class="text-center p-8 text-red-500">无法加载模型数据，请检查配置！</td></tr>`;
+    return;
+  }
+
   const meta = await fetchJSON(DATA_JSON);
   const preds = {}, scores = {};
 
-  const fetchPromises = [];
-
-  // 动态创建所有需要 fetch 的任务
-  IMAGE_TYPES.forEach(type => {
-    // 预测文件的路径, e.g., 'prediction/qwen7b/pred_original.json'
-    const predPath = `prediction/${modelKey}/pred_${type}.json`;
-    fetchPromises.push( fetchJSON(predPath).then(data => { preds[type] = data; }) );
-
-    // 分数文件的路径, e.g., 'score/qwen7b/score_original.json'
-    const scorePath = `score/${modelKey}/score_${type}.json`;
-    fetchPromises.push( fetchJSON(scorePath).then(data => { scores[type] = data; }) );
+  const predPromises = Object.entries(modelDataPaths.preds).map(async ([type, path]) => {
+    preds[type] = await fetchJSON(path);
   });
 
-  // 并行执行所有 fetch 任务
-  await Promise.all(fetchPromises);
+  const scorePromises = Object.entries(modelDataPaths.scores).map(async ([type, path]) => {
+    scores[type] = await fetchJSON(path);
+  });
+
+  await Promise.all([...predPromises, ...scorePromises]);
   
-  // 数据加载完毕后渲染表格 (render函数无需修改)
   render(meta, preds, scores);
 }
 
