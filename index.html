@@ -19,7 +19,6 @@
 
 <section class="px-6 max-w-screen-2xl mx-auto my-4 flex flex-wrap gap-4 items-center">
   <label class="font-semibold">Model:</label>
-  <!-- 1. 在下拉列表中增加 GPT-4o-mini 选项 -->
   <select id="modelSel" class="p-2 border rounded-md">
     <option value="7B">Qwen 7B</option>
     <option value="3B">Qwen 3B</option>
@@ -34,28 +33,32 @@
 
 <div class="table-wrap px-6 max-w-screen-2xl mx-auto ring-1 ring-gray-200 rounded-xl shadow mb-10">
   <table class="min-w-full text-xs whitespace-nowrap">
-    <!-- 表头现在由JS动态生成 -->
     <thead class="bg-gray-100 font-semibold"></thead>
     <tbody id="dataBody" class="divide-y divide-gray-200 bg-white"></tbody>
   </table>
 </div>
 
 <script>
-/* ========== CONFIG (2. 核心修改) ========== */
+/* ========== CONFIG (核心修改区域: 更新为正确的文件夹结构) ========== */
 const DATA_JSON  = 'mm-vet.json';
 
-// 为 gpt4o-mini 定义一套完整的数据源，包含新增的 clatxt
 const PRED_SET   = {
-  '7B': {orig:'prediction/pred_original_7B.json', cla:'prediction/pred_claude_7B.json', gem:'prediction/pred_gemini_7B.json', qwn:'prediction/pred_qwen_7B.json', gpt:'prediction/pred_gpt_7B.json'},
-  '3B': {orig:'prediction/pred_original_3B.json', cla:'prediction/pred_claude_3B.json', gem:'prediction/pred_gemini_3B.json', qwn:'prediction/pred_qwen_3B.json', gpt:'prediction/pred_gpt_3B.json'},
-  'g4omini': {orig:'gpt4o-mini/pred_original.json', cla:'gpt4o-mini/pred_claude.json', clatxt:'gpt4o-mini/pred_claude_from_text.json', gem:'gpt4o-mini/pred_gemini.json', qwn:'gpt4o-mini/pred_qwen.json', gpt:'gpt4o-mini/pred_gpt.json'}
+  // Qwen 7B 的文件在 prediction/qwen7b/ 目录下
+  '7B': {orig:'prediction/qwen7b/pred_original_7B.json', cla:'prediction/qwen7b/pred_claude_7B.json', gem:'prediction/qwen7b/pred_gemini_7B.json', qwn:'prediction/qwen7b/pred_qwen_7B.json', gpt:'prediction/qwen7b/pred_gpt_7B.json'},
+  // Qwen 3B 的文件在 prediction/qwen3b/ 目录下
+  '3B': {orig:'prediction/qwen3b/pred_original_3B.json', cla:'prediction/qwen3b/pred_claude_3B.json', gem:'prediction/qwen3b/pred_gemini_3B.json', qwn:'prediction/qwen3b/pred_qwen_3B.json', gpt:'prediction/qwen3b/pred_gpt_3B.json'},
+  // GPT-4o-mini 的文件在 prediction/gpt4o-mini/ 目录下
+  'g4omini': {orig:'prediction/gpt4o-mini/pred_original.json', cla:'prediction/gpt4o-mini/pred_claude.json', clatxt:'prediction/gpt4o-mini/pred_claude_from_text.json', gem:'prediction/gpt4o-mini/pred_gemini.json', qwn:'prediction/gpt4o-mini/pred_qwen.json', gpt:'prediction/gpt4o-mini/pred_gpt.json'}
 };
 const SCORE_SET  = {
-  '7B': {orig:'score/score_original_7B.json', cla:'score/score_claude_7B.json', gem:'score/score_gemini_7B.json', qwn:'score/score_qwen_7B.json', gpt:'score/score_gpt_7B.json'},
-  '3B': {orig:'score/score_original_3B.json', cla:'score/score_claude_3B.json', gem:'score/score_gemini_3B.json', qwn:'score/score_qwen_3B.json', gpt:'score/score_gpt_3B.json'},
-  'g4omini': {orig:'gpt4o-mini/score_original.json', cla:'gpt4o-mini/score_claude.json', clatxt:'gpt4o-mini/score_claude_from_text.json', gem:'gpt4o-mini/score_gemini.json', qwn:'gpt4o-mini/score_qwen.json', gpt:'gpt4o-mini/score_gpt.json'}
+  // Qwen 7B 的文件在 score/qwen7b/ 目录下
+  '7B': {orig:'score/qwen7b/score_original_7B.json', cla:'score/qwen7b/score_claude_7B.json', gem:'score/qwen7b/score_gemini_7B.json', qwn:'score/qwen7b/score_qwen_7B.json', gpt:'score/qwen7b/score_gpt_7B.json'},
+  // Qwen 3B 的文件在 score/qwen3b/ 目录下
+  '3B': {orig:'score/qwen3b/score_original_3B.json', cla:'score/qwen3b/score_claude_3B.json', gem:'score/qwen3b/score_gemini_3B.json', qwn:'score/qwen3b/score_qwen_3B.json', gpt:'score/qwen3b/score_gpt_3B.json'},
+  // GPT-4o-mini 的文件在 score/gpt4o-mini/ 目录下
+  'g4omini': {orig:'score/gpt4o-mini/score_original.json', cla:'score/gpt4o-mini/score_claude.json', clatxt:'score/gpt4o-mini/score_claude_from_text.json', gem:'score/gpt4o-mini/score_gemini.json', qwn:'score/gpt4o-mini/score_qwen.json', gpt:'score/gpt4o-mini/score_gpt.json'}
 };
-// 增加新图片文件夹
+// 图片目录结构保持不变
 const IMG_DIR = {orig:'images/', cla:'images_claude/', clatxt:'images_claude_from_text/', gem:'images_gemini/', qwn:'images_qwen/', gpt:'images_gpt/'};
 
 const fetchJSON = p => fetch(p).then(r=>r.json()).catch(()=>({}));
@@ -94,7 +97,7 @@ function imgCell(src){
   return td;
 }
 
-/* ========== DATA LOAD & RENDER (3. 核心修改) ========== */
+/* ========== DATA LOAD & RENDER (无修改) ========== */
 async function loadAll(){
   const tag  = document.getElementById('modelSel').value;
   const meta = await fetchJSON(DATA_JSON);
@@ -110,10 +113,8 @@ function render(meta, preds, scores){
   tbody.innerHTML='';
   let idx=0;
 
-  // 根据加载的数据动态确定列
   const imageTypes = Object.keys(preds);
   
-  // -- 动态生成表头 --
   const headerLabels = { orig: 'Orig', cla: 'Claude', clatxt: 'Cla-Txt', gem: 'Gemini', qwn: 'Qwen72B', gpt: 'GPT' };
   const scoreLabels = { orig: 'S-Orig', cla: 'S-Cla', clatxt: 'S-ClaT', gem: 'S-Gem', qwn: 'S-Qwn', gpt: 'S-GPT' };
   
@@ -124,7 +125,6 @@ function render(meta, preds, scores){
   headerHTML += '</tr>';
   thead.innerHTML = headerHTML;
 
-  // -- 动态生成表体 --
   for(const [id,d] of Object.entries(meta)){
     const tr = document.createElement('tr');
     tr.dataset.cls = d.capability.join(',');
@@ -134,7 +134,6 @@ function render(meta, preds, scores){
     idxCell.textContent = ++idx;
     tr.appendChild(idxCell);
     
-    // 使用动态的 imageTypes 数组来渲染
     imageTypes.forEach(key=> tr.appendChild(imgCell(IMG_DIR[key]+d.imagename)) );
     
     tr.appendChild(clipCell(d.question,'Question'));
