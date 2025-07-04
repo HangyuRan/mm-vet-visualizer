@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MM‑Vet Visualizer – Qwen / GPT</title>
+<title>MM‑Vet Visualizer – Qwen / GPT / Claude</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   .clip-text{max-width:10rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
@@ -14,15 +14,14 @@
 <body class="bg-gray-50 text-gray-900">
 <header class="bg-indigo-600 text-white p-6 shadow-lg">
   <h1 class="text-3xl font-semibold">MM‑Vet Benchmark Visualizer</h1>
-  <p class="opacity-90">原始与四种合成图对比，可切换不同推理模型。</p>
+  <p class="opacity-90">原始与五种合成图对比，可切换 <b>Qwen‑2.5‑VL 7B / 3B</b>。</p>
 </header>
 
 <section class="px-6 max-w-screen-2xl mx-auto my-4 flex flex-wrap gap-4 items-center">
   <label class="font-semibold">Model:</label>
   <select id="modelSel" class="p-2 border rounded-md">
-    <option value="qwen7b">Qwen 7B</option>
-    <option value="qwen3b">Qwen 3B</option>
-    <option value="gpt4o-mini">GPT-4o-mini</option>
+    <option value="7B">Qwen 7B</option>
+    <option value="3B">Qwen 3B</option>
   </select>
   <input id="searchInput" placeholder="Search …" class="flex-1 p-2 border rounded-md"/>
   <select id="capabilityFilter" class="p-2 border rounded-md">
@@ -35,9 +34,9 @@
   <table class="min-w-full text-xs whitespace-nowrap">
     <thead class="bg-gray-100 font-semibold">
       <tr>
-        <th class="px-2 py-3">#</th><th class="px-2 py-3">Orig</th><th class="px-2 py-3">Claude</th><th class="px-2 py-3">Gemini</th><th class="px-2 py-3">Qwen72B</th><th class="px-2 py-3">GPT</th>
+        <th class="px-2 py-3">#</th><th class="px-2 py-3">Orig</th><th class="px-2 py-3">Claude</th><th class="px-2 py-3">Cla-Txt</th><th class="px-2 py-3">Gemini</th><th class="px-2 py-3">Qwen72B</th><th class="px-2 py-3">GPT</th>
         <th class="px-2 py-3">Question</th><th class="px-2 py-3">Answer</th><th class="px-2 py-3">Caps</th>
-        <th class="px-2 py-3">S‑Orig</th><th class="px-2 py-3">S‑Cla</th><th class="px-2 py-3">S‑Gem</th><th class="px-2 py-3">S‑Qwn</th><th class="px-2 py-3">S‑GPT</th>
+        <th class="px-2 py-3">S‑Orig</th><th class="px-2 py-3">S‑Cla</th><th class="px-2 py-3">S-ClaT</th><th class="px-2 py-3">S‑Gem</th><th class="px-2 py-3">S‑Qwn</th><th class="px-2 py-3">S‑GPT</th>
       </tr>
     </thead>
     <tbody id="dataBody" class="divide-y divide-gray-200 bg-white"></tbody>
@@ -45,61 +44,19 @@
 </div>
 
 <script>
-/* ========== CONFIG & CONSTANTS ========== */
+/* ========== CONFIG (核心修改区域) ========== */
 const DATA_JSON  = 'mm-vet.json';
-const IMG_DIR = {orig:'images/', cla:'images_claude/', gem:'images_gemini/', qwn:'images_qwen/', gpt:'images_gpt/'};
-const IMAGE_TYPES = ['orig', 'cla', 'gem', 'qwn', 'gpt'];
 
-const DATA_PATHS = {
-  'qwen7b': {
-    preds: {
-      orig: 'prediction/qwen7b/pred_original.json',
-      cla:  'prediction/qwen7b/pred_claude.json',
-      gem:  'prediction/qwen7b/pred_gemini.json',
-      qwn:  'prediction/qwen7b/pred_qwen.json',
-      gpt:  'prediction/qwen7b/pred_gpt.json'
-    },
-    scores: {
-      orig: 'score/qwen7b/score_original.json',
-      cla:  'score/qwen7b/score_claude.json',
-      gem:  'score/qwen7b/score_gemini.json',
-      qwn:  'score/qwen7b/score_qwen.json',
-      gpt:  'score/qwen7b/score_gpt.json'
-    }
-  },
-  'qwen3b': {
-    preds: {
-      orig: 'prediction/qwen3b/pred_original.json',
-      cla:  'prediction/qwen3b/pred_claude.json',
-      gem:  'prediction/qwen3b/pred_gemini.json',
-      qwn:  'prediction/qwen3b/pred_qwen.json',
-      gpt:  'prediction/qwen3b/pred_gpt.json'
-    },
-    scores: {
-      orig: 'score/qwen3b/score_original.json',
-      cla:  'score/qwen3b/score_claude.json',
-      gem:  'score/qwen3b/score_gemini.json',
-      qwn:  'score/qwen3b/score_qwen.json',
-      gpt:  'score/qwen3b/score_gpt.json'
-    }
-  },
-  'gpt4o-mini': {
-    preds: {
-      orig: 'prediction/gpt4o-mini/pred_original.json',
-      cla:  'prediction/gpt4o-mini/pred_claude.json',
-      gem:  'prediction/gpt4o-mini/pred_gemini.json',
-      qwn:  'prediction/gpt4o-mini/pred_qwen.json',
-      gpt:  'prediction/gpt4o-mini/pred_gpt.json'
-    },
-    scores: {
-      orig: 'score/gpt4o-mini/score_original.json',
-      cla:  'score/gpt4o-mini/score_claude.json',
-      gem:  'score/gpt4o-mini/score_gemini.json',
-      qwn:  'score/gpt4o-mini/score_qwen.json',
-      gpt:  'score/gpt4o-mini/score_gpt.json'
-    }
-  }
+// 将 clatxt 的文件名去掉了 _7B 和 _3B 后缀
+const PRED_SET   = {
+  '7B': {orig:'prediction/pred_original_7B.json', cla:'prediction/pred_claude_7B.json', clatxt:'gpt4o-mini/pred_claude_from_text.json', gem:'prediction/pred_gemini_7B.json', qwn:'prediction/pred_qwen_7B.json', gpt:'prediction/pred_gpt_7B.json'},
+  '3B': {orig:'prediction/pred_original_3B.json', cla:'prediction/pred_claude_3B.json', clatxt:'gpt4o-mini/pred_claude_from_text.json', gem:'prediction/pred_gemini_3B.json', qwn:'prediction/pred_qwen_3B.json', gpt:'prediction/pred_gpt_3B.json'}
 };
+const SCORE_SET  = {
+  '7B': {orig:'score/score_original_7B.json', cla:'score/score_claude_7B.json', clatxt:'gpt4o-mini/score_claude_from_text.json', gem:'score/score_gemini_7B.json', qwn:'score/score_qwen_7B.json', gpt:'score/score_gpt_7B.json'},
+  '3B': {orig:'score/score_original_3B.json', cla:'score/score_claude_3B.json', clatxt:'gpt4o-mini/score_claude_from_text.json', gem:'score/score_gemini_3B.json', qwn:'score/score_qwen_3B.json', gpt:'score/score_gpt_3B.json'}
+};
+const IMG_DIR = {orig:'images/', cla:'images_claude/', clatxt:'images_claude_from_text/', gem:'images_gemini/', qwn:'images_qwen/', gpt:'images_gpt/'};
 
 const fetchJSON = p => fetch(p).then(r=>r.json()).catch(()=>({}));
 
@@ -141,28 +98,11 @@ function imgCell(src){
 
 /* ========== DATA LOAD & RENDER ========== */
 async function loadAll(){
-  const modelKey = document.getElementById('modelSel').value;
-  const modelDataPaths = DATA_PATHS[modelKey];
-
-  if (!modelDataPaths) {
-    console.error('错误: 没有为模型 ' + modelKey + ' 定义数据路径。');
-    document.getElementById('dataBody').innerHTML = `<tr><td colspan="15" class="text-center p-8 text-red-500">无法加载模型数据，请检查配置！</td></tr>`;
-    return;
-  }
-
+  const tag  = document.getElementById('modelSel').value;
   const meta = await fetchJSON(DATA_JSON);
-  const preds = {}, scores = {};
-
-  const predPromises = Object.entries(modelDataPaths.preds).map(async ([type, path]) => {
-    preds[type] = await fetchJSON(path);
-  });
-
-  const scorePromises = Object.entries(modelDataPaths.scores).map(async ([type, path]) => {
-    scores[type] = await fetchJSON(path);
-  });
-
-  await Promise.all([...predPromises, ...scorePromises]);
-  
+  const preds  = {}, scores = {};
+  await Promise.all(Object.entries(PRED_SET[tag]).map(async([k,p])=> preds[k]  = await fetchJSON(p)));
+  await Promise.all(Object.entries(SCORE_SET[tag]).map(async([k,p])=> scores[k] = await fetchJSON(p)));
   render(meta, preds, scores);
 }
 
@@ -170,6 +110,7 @@ function render(meta, preds, scores){
   const tb = document.getElementById('dataBody');
   tb.innerHTML='';
   let idx=0;
+  const imageTypes = ['orig', 'cla', 'clatxt', 'gem', 'qwn', 'gpt'];
 
   for(const [id,d] of Object.entries(meta)){
     const tr = document.createElement('tr');
@@ -180,7 +121,7 @@ function render(meta, preds, scores){
     idxCell.textContent = ++idx;
     tr.appendChild(idxCell);
     
-    IMAGE_TYPES.forEach(key=> tr.appendChild(imgCell(IMG_DIR[key]+d.imagename)) );
+    imageTypes.forEach(key=> tr.appendChild(imgCell(IMG_DIR[key]+d.imagename)) );
     
     tr.appendChild(clipCell(d.question,'Question'));
     tr.appendChild(clipCell(d.answer,'Answer'));
@@ -190,7 +131,7 @@ function render(meta, preds, scores){
     capsCell.textContent = d.capability.join(', ');
     tr.appendChild(capsCell);
 
-    IMAGE_TYPES.forEach(k=> tr.appendChild( scoreCell(scores[k]?.[id]?.score?.[0], preds[k]?.[id]) ));
+    imageTypes.forEach(k=> tr.appendChild( scoreCell(scores[k][id]?.score?.[0], preds[k][id]) ));
     
     tb.appendChild(tr);
   }
