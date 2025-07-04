@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MM‑Vet Visualizer – Qwen / GPT / Claude</title>
+<title>MM‑Vet Visualizer – Qwen / GPT</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   .clip-text{max-width:10rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
@@ -14,14 +14,16 @@
 <body class="bg-gray-50 text-gray-900">
 <header class="bg-indigo-600 text-white p-6 shadow-lg">
   <h1 class="text-3xl font-semibold">MM‑Vet Benchmark Visualizer</h1>
-  <p class="opacity-90">原始与五种合成图对比，可切换 <b>Qwen‑2.5‑VL 7B / 3B</b>。</p>
+  <p class="opacity-90">原始与多种合成图对比，可切换 <b>Qwen 7B / 3B / GPT-4o-mini</b>。</p>
 </header>
 
 <section class="px-6 max-w-screen-2xl mx-auto my-4 flex flex-wrap gap-4 items-center">
   <label class="font-semibold">Model:</label>
+  <!-- 1. 在下拉列表中增加 GPT-4o-mini 选项 -->
   <select id="modelSel" class="p-2 border rounded-md">
     <option value="7B">Qwen 7B</option>
     <option value="3B">Qwen 3B</option>
+    <option value="g4omini">GPT-4o-mini</option>
   </select>
   <input id="searchInput" placeholder="Search …" class="flex-1 p-2 border rounded-md"/>
   <select id="capabilityFilter" class="p-2 border rounded-md">
@@ -32,35 +34,33 @@
 
 <div class="table-wrap px-6 max-w-screen-2xl mx-auto ring-1 ring-gray-200 rounded-xl shadow mb-10">
   <table class="min-w-full text-xs whitespace-nowrap">
-    <thead class="bg-gray-100 font-semibold">
-      <tr>
-        <th class="px-2 py-3">#</th><th class="px-2 py-3">Orig</th><th class="px-2 py-3">Claude</th><th class="px-2 py-3">Cla-Txt</th><th class="px-2 py-3">Gemini</th><th class="px-2 py-3">Qwen72B</th><th class="px-2 py-3">GPT</th>
-        <th class="px-2 py-3">Question</th><th class="px-2 py-3">Answer</th><th class="px-2 py-3">Caps</th>
-        <th class="px-2 py-3">S‑Orig</th><th class="px-2 py-3">S‑Cla</th><th class="px-2 py-3">S-ClaT</th><th class="px-2 py-3">S‑Gem</th><th class="px-2 py-3">S‑Qwn</th><th class="px-2 py-3">S‑GPT</th>
-      </tr>
-    </thead>
+    <!-- 表头现在由JS动态生成 -->
+    <thead class="bg-gray-100 font-semibold"></thead>
     <tbody id="dataBody" class="divide-y divide-gray-200 bg-white"></tbody>
   </table>
 </div>
 
 <script>
-/* ========== CONFIG (核心修改区域) ========== */
+/* ========== CONFIG (2. 核心修改) ========== */
 const DATA_JSON  = 'mm-vet.json';
 
-// 将 clatxt 的文件名去掉了 _7B 和 _3B 后缀
+// 为 gpt4o-mini 定义一套完整的数据源，包含新增的 clatxt
 const PRED_SET   = {
-  '7B': {orig:'prediction/pred_original_7B.json', cla:'prediction/pred_claude_7B.json', clatxt:'gpt4o-mini/pred_claude_from_text.json', gem:'prediction/pred_gemini_7B.json', qwn:'prediction/pred_qwen_7B.json', gpt:'prediction/pred_gpt_7B.json'},
-  '3B': {orig:'prediction/pred_original_3B.json', cla:'prediction/pred_claude_3B.json', clatxt:'gpt4o-mini/pred_claude_from_text.json', gem:'prediction/pred_gemini_3B.json', qwn:'prediction/pred_qwen_3B.json', gpt:'prediction/pred_gpt_3B.json'}
+  '7B': {orig:'prediction/pred_original_7B.json', cla:'prediction/pred_claude_7B.json', gem:'prediction/pred_gemini_7B.json', qwn:'prediction/pred_qwen_7B.json', gpt:'prediction/pred_gpt_7B.json'},
+  '3B': {orig:'prediction/pred_original_3B.json', cla:'prediction/pred_claude_3B.json', gem:'prediction/pred_gemini_3B.json', qwn:'prediction/pred_qwen_3B.json', gpt:'prediction/pred_gpt_3B.json'},
+  'g4omini': {orig:'gpt4o-mini/pred_original.json', cla:'gpt4o-mini/pred_claude.json', clatxt:'gpt4o-mini/pred_claude_from_text.json', gem:'gpt4o-mini/pred_gemini.json', qwn:'gpt4o-mini/pred_qwen.json', gpt:'gpt4o-mini/pred_gpt.json'}
 };
 const SCORE_SET  = {
-  '7B': {orig:'score/score_original_7B.json', cla:'score/score_claude_7B.json', clatxt:'gpt4o-mini/score_claude_from_text.json', gem:'score/score_gemini_7B.json', qwn:'score/score_qwen_7B.json', gpt:'score/score_gpt_7B.json'},
-  '3B': {orig:'score/score_original_3B.json', cla:'score/score_claude_3B.json', clatxt:'gpt4o-mini/score_claude_from_text.json', gem:'score/score_gemini_3B.json', qwn:'score/score_qwen_3B.json', gpt:'score/score_gpt_3B.json'}
+  '7B': {orig:'score/score_original_7B.json', cla:'score/score_claude_7B.json', gem:'score/score_gemini_7B.json', qwn:'score/score_qwen_7B.json', gpt:'score/score_gpt_7B.json'},
+  '3B': {orig:'score/score_original_3B.json', cla:'score/score_claude_3B.json', gem:'score/score_gemini_3B.json', qwn:'score/score_qwen_3B.json', gpt:'score/score_gpt_3B.json'},
+  'g4omini': {orig:'gpt4o-mini/score_original.json', cla:'gpt4o-mini/score_claude.json', clatxt:'gpt4o-mini/score_claude_from_text.json', gem:'gpt4o-mini/score_gemini.json', qwn:'gpt4o-mini/score_qwen.json', gpt:'gpt4o-mini/score_gpt.json'}
 };
+// 增加新图片文件夹
 const IMG_DIR = {orig:'images/', cla:'images_claude/', clatxt:'images_claude_from_text/', gem:'images_gemini/', qwn:'images_qwen/', gpt:'images_gpt/'};
 
 const fetchJSON = p => fetch(p).then(r=>r.json()).catch(()=>({}));
 
-/* ========== MODAL ========== */
+/* ========== MODAL & BUILD CELLS (无修改) ========== */
 function modal(title, html){
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
@@ -70,8 +70,6 @@ function modal(title, html){
    </div>`;
   document.body.appendChild(bg);
 }
-
-/* ========== BUILD CELLS ========== */
 function clipCell(text, label){
   const td = document.createElement('td');
   td.textContent = text;
@@ -96,7 +94,7 @@ function imgCell(src){
   return td;
 }
 
-/* ========== DATA LOAD & RENDER ========== */
+/* ========== DATA LOAD & RENDER (3. 核心修改) ========== */
 async function loadAll(){
   const tag  = document.getElementById('modelSel').value;
   const meta = await fetchJSON(DATA_JSON);
@@ -107,11 +105,26 @@ async function loadAll(){
 }
 
 function render(meta, preds, scores){
-  const tb = document.getElementById('dataBody');
-  tb.innerHTML='';
+  const thead = document.querySelector('table thead');
+  const tbody = document.getElementById('dataBody');
+  tbody.innerHTML='';
   let idx=0;
-  const imageTypes = ['orig', 'cla', 'clatxt', 'gem', 'qwn', 'gpt'];
 
+  // 根据加载的数据动态确定列
+  const imageTypes = Object.keys(preds);
+  
+  // -- 动态生成表头 --
+  const headerLabels = { orig: 'Orig', cla: 'Claude', clatxt: 'Cla-Txt', gem: 'Gemini', qwn: 'Qwen72B', gpt: 'GPT' };
+  const scoreLabels = { orig: 'S-Orig', cla: 'S-Cla', clatxt: 'S-ClaT', gem: 'S-Gem', qwn: 'S-Qwn', gpt: 'S-GPT' };
+  
+  let headerHTML = '<tr><th class="px-2 py-3">#</th>';
+  imageTypes.forEach(key => headerHTML += `<th class="px-2 py-3">${headerLabels[key]}</th>`);
+  headerHTML += '<th class="px-2 py-3">Question</th><th class="px-2 py-3">Answer</th><th class="px-2 py-3">Caps</th>';
+  imageTypes.forEach(key => headerHTML += `<th class="px-2 py-3">${scoreLabels[key]}</th>`);
+  headerHTML += '</tr>';
+  thead.innerHTML = headerHTML;
+
+  // -- 动态生成表体 --
   for(const [id,d] of Object.entries(meta)){
     const tr = document.createElement('tr');
     tr.dataset.cls = d.capability.join(',');
@@ -121,6 +134,7 @@ function render(meta, preds, scores){
     idxCell.textContent = ++idx;
     tr.appendChild(idxCell);
     
+    // 使用动态的 imageTypes 数组来渲染
     imageTypes.forEach(key=> tr.appendChild(imgCell(IMG_DIR[key]+d.imagename)) );
     
     tr.appendChild(clipCell(d.question,'Question'));
@@ -133,12 +147,12 @@ function render(meta, preds, scores){
 
     imageTypes.forEach(k=> tr.appendChild( scoreCell(scores[k][id]?.score?.[0], preds[k][id]) ));
     
-    tb.appendChild(tr);
+    tbody.appendChild(tr);
   }
   filterRows();
 }
 
-/* ========== FILTER & EVENTS ========== */
+/* ========== FILTER & EVENTS (无修改) ========== */
 function filterRows(){
   const cap = document.getElementById('capabilityFilter').value;
   const kw  = document.getElementById('searchInput').value.toLowerCase();
