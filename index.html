@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MM‑Vet Visualizer – Qwen / GPT</title>
+<title>MM‑Vet Visualizer – Dynamic Conversion</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   .clip-text{max-width:10rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
@@ -14,16 +14,32 @@
 <body class="bg-gray-50 text-gray-900">
 <header class="bg-indigo-600 text-white p-6 shadow-lg">
   <h1 class="text-3xl font-semibold">MM‑Vet Benchmark Visualizer</h1>
-  <p class="opacity-90">原始与多种合成图对比，可切换 <b>Qwen 7B / 3B / GPT-4o-mini</b>。</p>
+  <p class="opacity-90">Compare results by switching the <b>View Mode</b> and <b>Inference Model</b>.</p>
 </header>
 
 <section class="px-6 max-w-screen-2xl mx-auto my-4 flex flex-wrap gap-4 items-center">
-  <label class="font-semibold">Model:</label>
+  <div class="flex items-center gap-4">
+    <label class="font-semibold">View Mode:</label>
+    <div class="flex rounded-md shadow-sm bg-white p-0.5">
+      <label class="cursor-pointer">
+        <input type="radio" name="viewType" value="method" class="sr-only peer" checked>
+        <span class="px-3 py-1 text-sm rounded-md peer-checked:bg-indigo-600 peer-checked:text-white">By Method</span>
+      </label>
+      <label class="cursor-pointer">
+        <input type="radio" name="viewType" value="gen" class="sr-only peer">
+        <span class="px-3 py-1 text-sm rounded-md peer-checked:bg-indigo-600 peer-checked:text-white">By Generator</span>
+      </label>
+    </div>
+    <select id="subSelector" class="p-2 border rounded-md"></select>
+  </div>
+
+  <label class="font-semibold ml-4">Model:</label>
   <select id="modelSel" class="p-2 border rounded-md">
-    <option value="7B">Qwen 7B</option>
-    <option value="3B">Qwen 3B</option>
+    <option value="7B">Qwen2.5-VL-7B</option>
+    <option value="3B">Qwen2.5-VL-3B</option>
     <option value="g4omini">GPT-4o-mini</option>
   </select>
+
   <input id="searchInput" placeholder="Search …" class="flex-1 p-2 border rounded-md"/>
   <select id="capabilityFilter" class="p-2 border rounded-md">
     <option value="all">All caps</option>
@@ -39,26 +55,39 @@
 </div>
 
 <script>
-/* ========== CONFIG (核心修改区域: 更新为正确的文件夹结构) ========== */
+/* ========== CONFIG ========== */
 const DATA_JSON  = 'mm-vet.json';
 
+const METHOD_SETS = {
+  'img2svg': 'Img2SVG',
+  'img2text2svg': 'Img2Text2SVG'
+};
+
+// 核心修改: 更新下拉框的显示名称
+const GENERATOR_SETS = {
+  'cla': 'Claude Opus 4',
+  'gem': 'Gemini 2.5 Pro',
+  'qwn': 'Qwen2.5-VL-72B',
+  'gpt': 'GPT-4o'
+};
+
+const GENERATOR_VARIANTS = {
+  'cla': ['cla', 'clatxt'],
+  'gem': ['gem'],
+  'qwn': ['qwn'],
+  'gpt': ['gpt']
+};
+
 const PRED_SET   = {
-  // Qwen 7B 的文件在 prediction/qwen7b/ 目录下
-  '7B': {orig:'prediction/qwen7b/pred_original.json', cla:'prediction/qwen7b/pred_claude.json', gem:'prediction/qwen7b/pred_gemini.json', qwn:'prediction/qwen7b/pred_qwen.json', gpt:'prediction/qwen7b/pred_gpt.json'},
-  // Qwen 3B 的文件在 prediction/qwen3b/ 目录下
-  '3B': {orig:'prediction/qwen3b/pred_original.json', cla:'prediction/qwen3b/pred_claude.json', gem:'prediction/qwen3b/pred_gemini.json', qwn:'prediction/qwen3b/pred_qwen.json', gpt:'prediction/qwen3b/pred_gpt.json'},
-  // GPT-4o-mini 的文件在 prediction/gpt4o-mini/ 目录下
+  '7B': {orig:'prediction/qwen7b/pred_original_7B.json', cla:'prediction/qwen7b/pred_claude_7B.json', gem:'prediction/qwen7b/pred_gemini_7B.json', qwn:'prediction/qwen7b/pred_qwen_7B.json', gpt:'prediction/qwen7b/pred_gpt_7B.json'},
+  '3B': {orig:'prediction/qwen3b/pred_original_3B.json', cla:'prediction/qwen3b/pred_claude_3B.json', gem:'prediction/qwen3b/pred_gemini_3B.json', qwn:'prediction/qwen3b/pred_qwen_3B.json', gpt:'prediction/qwen3b/pred_gpt_3B.json'},
   'g4omini': {orig:'prediction/gpt4o-mini/pred_original.json', cla:'prediction/gpt4o-mini/pred_claude.json', clatxt:'prediction/gpt4o-mini/pred_claude_from_text.json', gem:'prediction/gpt4o-mini/pred_gemini.json', qwn:'prediction/gpt4o-mini/pred_qwen.json', gpt:'prediction/gpt4o-mini/pred_gpt.json'}
 };
 const SCORE_SET  = {
-  // Qwen 7B 的文件在 score/qwen7b/ 目录下
-  '7B': {orig:'score/qwen7b/score_original.json', cla:'score/qwen7b/score_claude.json', gem:'score/qwen7b/score_gemini.json', qwn:'score/qwen7b/score_qwen.json', gpt:'score/qwen7b/score_gpt.json'},
-  // Qwen 3B 的文件在 score/qwen3b/ 目录下
-  '3B': {orig:'score/qwen3b/score_original.json', cla:'score/qwen3b/score_claude.json', gem:'score/qwen3b/score_gemini.json', qwn:'score/qwen3b/score_qwen.json', gpt:'score/qwen3b/score_gpt.json'},
-  // GPT-4o-mini 的文件在 score/gpt4o-mini/ 目录下
+  '7B': {orig:'score/qwen7b/score_original_7B.json', cla:'score/qwen7b/score_claude_7B.json', gem:'score/qwen7b/score_gemini_7B.json', qwn:'score/qwen7b/score_qwen_7B.json', gpt:'score/qwen7b/score_gpt_7B.json'},
+  '3B': {orig:'score/qwen3b/score_original_3B.json', cla:'score/qwen3b/score_claude_3B.json', gem:'score/qwen3b/score_gemini_3B.json', qwn:'score/qwen3b/score_qwen_3B.json', gpt:'score/qwen3b/score_gpt_3B.json'},
   'g4omini': {orig:'score/gpt4o-mini/score_original.json', cla:'score/gpt4o-mini/score_claude.json', clatxt:'score/gpt4o-mini/score_claude_from_text.json', gem:'score/gpt4o-mini/score_gemini.json', qwn:'score/gpt4o-mini/score_qwen.json', gpt:'score/gpt4o-mini/score_gpt.json'}
 };
-// 图片目录结构保持不变
 const IMG_DIR = {orig:'images/', cla:'images_claude/', clatxt:'images_claude_from_text/', gem:'images_gemini/', qwn:'images_qwen/', gpt:'images_gpt/'};
 
 const fetchJSON = p => fetch(p).then(r=>r.json()).catch(()=>({}));
@@ -97,7 +126,17 @@ function imgCell(src){
   return td;
 }
 
-/* ========== DATA LOAD & RENDER (无修改) ========== */
+/* ========== UI & DATA LOGIC (无修改) ========== */
+function updateSubSelector() {
+  const viewType = document.querySelector('input[name="viewType"]:checked').value;
+  const subSelector = document.getElementById('subSelector');
+  const sourceData = (viewType === 'method') ? METHOD_SETS : GENERATOR_SETS;
+  
+  subSelector.innerHTML = '';
+  for (const [key, label] of Object.entries(sourceData)) {
+    subSelector.add(new Option(label, key));
+  }
+}
 async function loadAll(){
   const tag  = document.getElementById('modelSel').value;
   const meta = await fetchJSON(DATA_JSON);
@@ -106,14 +145,27 @@ async function loadAll(){
   await Promise.all(Object.entries(SCORE_SET[tag]).map(async([k,p])=> scores[k] = await fetchJSON(p)));
   render(meta, preds, scores);
 }
-
 function render(meta, preds, scores){
   const thead = document.querySelector('table thead');
   const tbody = document.getElementById('dataBody');
+  const viewType = document.querySelector('input[name="viewType"]:checked').value;
+  const subKey = document.getElementById('subSelector').value;
   tbody.innerHTML='';
   let idx=0;
 
-  const imageTypes = Object.keys(preds);
+  let syntheticTypes = [];
+  if (viewType === 'method') {
+    if (subKey === 'img2text2svg') {
+      syntheticTypes = ['clatxt'];
+    } else if (subKey === 'img2svg') {
+      syntheticTypes = ['cla', 'gem', 'qwn', 'gpt'];
+    }
+  } else if (viewType === 'gen') {
+    syntheticTypes = GENERATOR_VARIANTS[subKey] || [];
+  }
+  
+  const availableSynthTypes = syntheticTypes.filter(type => preds[type]);
+  const imageTypes = ['orig'].concat(availableSynthTypes);
   
   const headerLabels = { orig: 'Orig', cla: 'Claude', clatxt: 'Cla-Txt', gem: 'Gemini', qwn: 'Qwen72B', gpt: 'GPT' };
   const scoreLabels = { orig: 'S-Orig', cla: 'S-Cla', clatxt: 'S-ClaT', gem: 'S-Gem', qwn: 'S-Qwn', gpt: 'S-GPT' };
@@ -128,24 +180,18 @@ function render(meta, preds, scores){
   for(const [id,d] of Object.entries(meta)){
     const tr = document.createElement('tr');
     tr.dataset.cls = d.capability.join(',');
-
     const idxCell = document.createElement('td');
     idxCell.className = 'px-2 py-3 text-center';
     idxCell.textContent = ++idx;
     tr.appendChild(idxCell);
-    
     imageTypes.forEach(key=> tr.appendChild(imgCell(IMG_DIR[key]+d.imagename)) );
-    
     tr.appendChild(clipCell(d.question,'Question'));
     tr.appendChild(clipCell(d.answer,'Answer'));
-    
     const capsCell = document.createElement('td');
     capsCell.className = 'px-2 py-3';
     capsCell.textContent = d.capability.join(', ');
     tr.appendChild(capsCell);
-
-    imageTypes.forEach(k=> tr.appendChild( scoreCell(scores[k][id]?.score?.[0], preds[k][id]) ));
-    
+    imageTypes.forEach(k=> tr.appendChild( scoreCell(scores[k]?.[id]?.score?.[0], preds[k]?.[id]) ));
     tbody.appendChild(tr);
   }
   filterRows();
@@ -161,12 +207,19 @@ function filterRows(){
     tr.style.display = (okCap && okKw) ? '' : 'none';
   });
 }
-
+document.querySelectorAll('input[name="viewType"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    updateSubSelector();
+    loadAll();
+  });
+});
+document.getElementById('subSelector').addEventListener('change', loadAll);
 document.getElementById('modelSel').addEventListener('change', loadAll);
 document.getElementById('searchInput').addEventListener('input', filterRows);
 document.getElementById('capabilityFilter').addEventListener('change', filterRows);
 
 /* init */
+updateSubSelector();
 loadAll();
 </script>
 </body>
