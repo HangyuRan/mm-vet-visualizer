@@ -5,79 +5,115 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>VCode on MM-Vet Visualizer</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  body { font-family: 'Inter', sans-serif; }
   .clip-text{max-width:10rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
   .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50}
-  .table-wrap{overflow-x:auto}
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .modal-content { animation: fadeIn 0.2s ease-out forwards; }
+  .loader-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: opacity 0.3s;
+  }
+  .loader {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #4f46e5;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
-<header class="bg-indigo-600 text-white p-6 shadow-lg">
-  <h1 class="text-3xl font-semibold">VCode on MM-Vet Visualizer</h1>
-  <p class="opacity-90">Compare results by switching the <b>View Mode</b> and <b>Inference Model</b>.</p>
+<body class="bg-gray-100 text-gray-800">
+<!-- 1. 核心修改: 标题居中 -->
+<header class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-6 shadow-lg text-center">
+  <div class="flex items-center justify-center gap-3">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+    </svg>
+    <h1 class="text-3xl font-bold">VCode on MM-Vet Visualizer</h1>
+  </div>
+  <p class="opacity-80 mt-2">Compare results by switching the <b>View Mode</b> and <b>Inference Model</b>.</p>
 </header>
 
-<section class="px-6 max-w-screen-2xl mx-auto my-4 flex flex-wrap gap-4 items-center">
-  <div class="flex items-center gap-4">
-    <label class="font-semibold">View Mode:</label>
-    <div class="flex rounded-md shadow-sm bg-white p-0.5">
-      <label class="cursor-pointer">
-        <input type="radio" name="viewType" value="method" class="sr-only peer" checked>
-        <span class="px-3 py-1 text-sm rounded-md peer-checked:bg-indigo-600 peer-checked:text-white">By Method</span>
-      </label>
-      <label class="cursor-pointer">
-        <input type="radio" name="viewType" value="gen" class="sr-only peer">
-        <span class="px-3 py-1 text-sm rounded-md peer-checked:bg-indigo-600 peer-checked:text-white">By Generator</span>
-      </label>
+<section class="px-6 max-w-screen-2xl mx-auto my-8">
+  <div class="bg-white rounded-xl shadow-lg p-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="col-span-1 md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-2">View Options</label>
+        <div class="flex items-center gap-4">
+          <div class="flex rounded-md shadow-sm bg-gray-100 p-0.5">
+            <label class="cursor-pointer">
+              <input type="radio" name="viewType" value="method" class="sr-only peer" checked>
+              <span class="px-3 py-1.5 text-sm rounded-md peer-checked:bg-indigo-600 peer-checked:text-white transition-colors duration-200">By Method</span>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="viewType" value="gen" class="sr-only peer">
+              <span class="px-3 py-1.5 text-sm rounded-md peer-checked:bg-indigo-600 peer-checked:text-white transition-colors duration-200">By Generator</span>
+            </label>
+          </div>
+          <select id="subSelector" class="flex-1 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></select>
+        </div>
+      </div>
+      <div>
+        <label for="modelSel" class="block text-sm font-medium text-gray-700 mb-2">Inference Model</label>
+        <select id="modelSel" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+          <option value="7B">Qwen2.5-VL-7B</option>
+          <option value="3B">Qwen2.5-VL-3B</option>
+          <option value="g4omini">GPT-4o-mini</option>
+        </select>
+      </div>
+      <div>
+        <label for="capabilityFilter" class="block text-sm font-medium text-gray-700 mb-2">Filter by Capability</label>
+        <select id="capabilityFilter" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+          <option value="all">All Capabilities</option>
+          <option value="ocr">OCR</option><option value="math">Math</option><option value="spat">Spatial</option><option value="rec">Recognition</option><option value="know">Knowledge</option><option value="gen">Generation</option>
+        </select>
+      </div>
+      <div class="col-span-1 md:col-span-2 lg:col-span-4">
+        <label for="searchInput" class="block text-sm font-medium text-gray-700 mb-2">Search Table</label>
+        <input id="searchInput" placeholder="Type to search anything in the table..." class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"/>
+      </div>
     </div>
-    <select id="subSelector" class="p-2 border rounded-md"></select>
   </div>
-
-  <label class="font-semibold ml-4">Model:</label>
-  <select id="modelSel" class="p-2 border rounded-md">
-    <option value="7B">Qwen2.5-VL-7B</option>
-    <option value="3B">Qwen2.5-VL-3B</option>
-    <option value="g4omini">GPT-4o-mini</option>
-  </select>
-
-  <input id="searchInput" placeholder="Search …" class="flex-1 p-2 border rounded-md"/>
-  <select id="capabilityFilter" class="p-2 border rounded-md">
-    <option value="all">All caps</option>
-    <option value="ocr">OCR</option><option value="math">Math</option><option value="spat">Spatial</option><option value="rec">Recognition</option><option value="know">Knowledge</option><option value="gen">Generation</option>
-  </select>
 </section>
 
-<div class="table-wrap px-6 max-w-screen-2xl mx-auto ring-1 ring-gray-200 rounded-xl shadow mb-10">
-  <table class="min-w-full text-xs whitespace-nowrap">
-    <thead class="bg-gray-100 font-semibold"></thead>
-    <tbody id="dataBody" class="divide-y divide-gray-200 bg-white"></tbody>
-  </table>
+<div class="px-6 max-w-screen-2xl mx-auto mb-10">
+  <div id="tableContainer" class="relative bg-white ring-1 ring-gray-200 rounded-xl shadow-lg overflow-hidden">
+    <!-- 2. 核心修改: 包裹 table 的 div 必须有指定的高度才能让 sticky header 生效 -->
+    <div class="table-wrap h-[70vh] overflow-auto">
+        <table class="min-w-full text-xs whitespace-nowrap">
+            <thead class="bg-gray-50"></thead>
+            <tbody id="dataBody" class="divide-y divide-gray-200"></tbody>
+        </table>
+    </div>
+  </div>
 </div>
 
 <script>
-/* ========== CONFIG ========== */
+/* ========== CONFIG (无修改) ========== */
+// ... (此部分代码无变化)
 const DATA_JSON  = 'mm-vet.json';
-
-const METHOD_SETS = {
-  'img2svg': 'Img2SVG',
-  'img2text2svg': 'Img2Text2SVG'
-};
-
-// 核心修改: 更新下拉框的显示名称
-const GENERATOR_SETS = {
-  'cla': 'Claude Opus 4',
-  'gem': 'Gemini 2.5 Pro',
-  'qwn': 'Qwen2.5-VL-72B',
-  'gpt': 'GPT-4o'
-};
-
-const GENERATOR_VARIANTS = {
-  'cla': ['cla', 'clatxt'],
-  'gem': ['gem'],
-  'qwn': ['qwn'],
-  'gpt': ['gpt']
-};
-
+const METHOD_SETS = {'img2svg': 'Img2SVG', 'img2text2svg': 'Img2Text2SVG'};
+const GENERATOR_SETS = {'cla': 'Claude Opus 4', 'gem': 'Gemini 2.5 Pro', 'qwn': 'Qwen2.5-VL-72B', 'gpt': 'GPT-4o'};
+const GENERATOR_VARIANTS = {'cla': ['cla', 'clatxt'], 'gem': ['gem'], 'qwn': ['qwn'], 'gpt': ['gpt']};
 const PRED_SET   = {
   '7B': {orig:'prediction/qwen7b/pred_original.json', cla:'prediction/qwen7b/pred_claude.json', gem:'prediction/qwen7b/pred_gemini.json', qwn:'prediction/qwen7b/pred_qwen.json', gpt:'prediction/qwen7b/pred_gpt.json'},
   '3B': {orig:'prediction/qwen3b/pred_original.json', cla:'prediction/qwen3b/pred_claude.json', gem:'prediction/qwen3b/pred_gemini.json', qwn:'prediction/qwen3b/pred_qwen.json', gpt:'prediction/qwen3b/pred_gpt.json'},
@@ -89,55 +125,68 @@ const SCORE_SET  = {
   'g4omini': {orig:'score/gpt4o-mini/score_original.json', cla:'score/gpt4o-mini/score_claude.json', clatxt:'score/gpt4o-mini/score_claude_from_text.json', gem:'score/gpt4o-mini/score_gemini.json', qwn:'score/gpt4o-mini/score_qwen.json', gpt:'score/gpt4o-mini/score_gpt.json'}
 };
 const IMG_DIR = {orig:'images/', cla:'images_claude/', clatxt:'images_claude_from_text/', gem:'images_gemini/', qwn:'images_qwen/', gpt:'images_gpt/'};
-
 const fetchJSON = p => fetch(p).then(r=>r.json()).catch(()=>({}));
 
 /* ========== MODAL & BUILD CELLS (无修改) ========== */
+// ... (此部分代码无变化)
 function modal(title, html){
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
-  bg.innerHTML = `<div class='bg-white rounded-xl p-6 max-h-[90vh] max-w-[90vw] overflow-auto shadow-xl'>
-     <h2 class='font-semibold mb-4'>${title}</h2>${html}
-     <div class='text-right mt-6'><button class='px-4 py-1 bg-indigo-600 text-white rounded' onclick='this.closest(".modal-bg").remove()'>Close</button></div>
+  bg.innerHTML = `<div class='bg-white rounded-xl p-6 max-h-[90vh] max-w-[90vw] overflow-auto shadow-xl modal-content'>
+     <h2 class='font-semibold text-lg mb-4'>${title}</h2>${html}
+     <div class='text-right mt-6'><button class='px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors' onclick='this.closest(".modal-bg").remove()'>Close</button></div>
    </div>`;
   document.body.appendChild(bg);
 }
 function clipCell(text, label){
   const td = document.createElement('td');
   td.textContent = text;
-  td.className   = 'px-2 py-3 clip-text';
-  td.addEventListener('click', ()=> modal(label, `<p class="whitespace-pre-wrap">${text}</p>`));
+  td.className   = 'px-3 py-3 clip-text text-gray-700';
+  td.addEventListener('click', ()=> modal(label, `<p class="whitespace-pre-wrap text-gray-800">${text}</p>`));
   return td;
 }
 function scoreCell(score, pred){
   const td = document.createElement('td');
   td.textContent = score ?? '—';
-  td.className   = 'px-2 py-3 text-center cursor-pointer';
-  td.addEventListener('click', ()=> modal('Prediction', `<p class="whitespace-pre-wrap">${pred ?? '—'}</p>`));
-  if(score==1||score==='1.0') td.classList.add('bg-emerald-100');
-  else if(score==0||score==='0.0') td.classList.add('bg-rose-100');
+  td.className   = 'px-3 py-3 text-center cursor-pointer font-medium';
+  td.addEventListener('click', ()=> modal('Prediction', `<p class="whitespace-pre-wrap text-gray-800">${pred ?? '—'}</p>`));
+  if(score==1||score==='1.0') td.classList.add('text-emerald-600', 'bg-emerald-50');
+  else if(score==0||score==='0.0') td.classList.add('text-rose-600', 'bg-rose-50');
   else td.classList.add('text-gray-400');
   return td;
 }
 function imgCell(src){
   const td = document.createElement('td');
-  td.innerHTML = `<img src="${src}" class="w-24 rounded shadow cursor-pointer">`;
-  td.firstChild.addEventListener('click', ()=> modal('Image', `<img src='${src}' class='max-w-full h-auto rounded'>`));
+  td.className = 'p-1.5';
+  td.innerHTML = `<img src="${src}" class="w-24 rounded-md shadow cursor-pointer transition-transform duration-200 hover:scale-105">`;
+  td.firstChild.addEventListener('click', ()=> modal('Image', `<img src='${src}' class='max-w-full h-auto rounded-lg'>`));
   return td;
 }
 
-/* ========== UI & DATA LOGIC (无修改) ========== */
+/* ========== UI & DATA LOGIC ========== */
+function showLoader(show) {
+    const container = document.getElementById('tableContainer');
+    let overlay = container.querySelector('.loader-overlay');
+    if (show) {
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'loader-overlay';
+            overlay.innerHTML = '<div class="loader"></div>';
+            container.appendChild(overlay);
+        }
+    } else {
+        overlay?.remove();
+    }
+}
 function updateSubSelector() {
   const viewType = document.querySelector('input[name="viewType"]:checked').value;
   const subSelector = document.getElementById('subSelector');
   const sourceData = (viewType === 'method') ? METHOD_SETS : GENERATOR_SETS;
-  
   subSelector.innerHTML = '';
-  for (const [key, label] of Object.entries(sourceData)) {
-    subSelector.add(new Option(label, key));
-  }
+  for (const [key, label] of Object.entries(sourceData)) { subSelector.add(new Option(label, key)); }
 }
 async function loadAll(){
+  showLoader(true);
   const tag  = document.getElementById('modelSel').value;
   const meta = await fetchJSON(DATA_JSON);
   const preds  = {}, scores = {};
@@ -154,15 +203,9 @@ function render(meta, preds, scores){
   let idx=0;
 
   let syntheticTypes = [];
-  if (viewType === 'method') {
-    if (subKey === 'img2text2svg') {
-      syntheticTypes = ['clatxt'];
-    } else if (subKey === 'img2svg') {
-      syntheticTypes = ['cla', 'gem', 'qwn', 'gpt'];
-    }
-  } else if (viewType === 'gen') {
-    syntheticTypes = GENERATOR_VARIANTS[subKey] || [];
-  }
+  const variantsByMethod = {'img2svg': ['cla', 'gem', 'qwn', 'gpt'], 'img2text2svg': ['clatxt']};
+  if (viewType === 'method') { syntheticTypes = variantsByMethod[subKey] || []; } 
+  else if (viewType === 'gen') { syntheticTypes = GENERATOR_VARIANTS[subKey] || []; }
   
   const availableSynthTypes = syntheticTypes.filter(type => preds[type]);
   const imageTypes = ['orig'].concat(availableSynthTypes);
@@ -170,54 +213,72 @@ function render(meta, preds, scores){
   const headerLabels = { orig: 'Orig', cla: 'Claude', clatxt: 'Cla-Txt', gem: 'Gemini', qwn: 'Qwen72B', gpt: 'GPT' };
   const scoreLabels = { orig: 'S-Orig', cla: 'S-Cla', clatxt: 'S-ClaT', gem: 'S-Gem', qwn: 'S-Qwn', gpt: 'S-GPT' };
   
-  let headerHTML = '<tr><th class="px-2 py-3">#</th>';
-  imageTypes.forEach(key => headerHTML += `<th class="px-2 py-3">${headerLabels[key]}</th>`);
-  headerHTML += '<th class="px-2 py-3">Question</th><th class="px-2 py-3">Answer</th><th class="px-2 py-3">Caps</th>';
-  imageTypes.forEach(key => headerHTML += `<th class="px-2 py-3">${scoreLabels[key]}</th>`);
+  // 3. 核心修改: 增加 sticky 定位和背景色
+  let headerHTML = '<tr>';
+  const thClasses = 'sticky top-0 z-10 bg-gray-50 border-b border-gray-200 px-3 py-3 text-left text-sm font-medium text-gray-600';
+  headerHTML += `<th class="${thClasses}">#</th>`;
+  imageTypes.forEach(key => headerHTML += `<th class="${thClasses}">${headerLabels[key] || key}</th>`);
+  headerHTML += `<th class="${thClasses}">Question</th><th class="${thClasses}">Answer</th><th class="${thClasses}">Caps</th>`;
+  imageTypes.forEach(key => headerHTML += `<th class="${thClasses}">${scoreLabels[key] || `S-${key}`}</th>`);
   headerHTML += '</tr>';
   thead.innerHTML = headerHTML;
 
   for(const [id,d] of Object.entries(meta)){
     const tr = document.createElement('tr');
     tr.dataset.cls = d.capability.join(',');
+    tr.className = 'hover:bg-gray-50 transition-colors duration-150';
     const idxCell = document.createElement('td');
-    idxCell.className = 'px-2 py-3 text-center';
+    idxCell.className = 'px-3 py-3 text-center text-gray-500';
     idxCell.textContent = ++idx;
     tr.appendChild(idxCell);
     imageTypes.forEach(key=> tr.appendChild(imgCell(IMG_DIR[key]+d.imagename)) );
     tr.appendChild(clipCell(d.question,'Question'));
     tr.appendChild(clipCell(d.answer,'Answer'));
     const capsCell = document.createElement('td');
-    capsCell.className = 'px-2 py-3';
+    capsCell.className = 'px-3 py-3 text-gray-700';
     capsCell.textContent = d.capability.join(', ');
     tr.appendChild(capsCell);
     imageTypes.forEach(k=> tr.appendChild( scoreCell(scores[k]?.[id]?.score?.[0], preds[k]?.[id]) ));
     tbody.appendChild(tr);
   }
   filterRows();
+  showLoader(false);
 }
 
-/* ========== FILTER & EVENTS (无修改) ========== */
+/* ========== FILTER & EVENTS ========== */
 function filterRows(){
+  document.querySelector('#noResultsRow')?.remove();
+  const tbody = document.getElementById('dataBody');
   const cap = document.getElementById('capabilityFilter').value;
   const kw  = document.getElementById('searchInput').value.toLowerCase();
-  document.querySelectorAll('#dataBody tr').forEach(tr=>{
+  let visibleCount = 0;
+  
+  tbody.querySelectorAll('tr').forEach(tr=>{
     const okCap = cap==='all' || tr.dataset.cls.includes(cap);
     const okKw  = tr.innerText.toLowerCase().includes(kw);
-    tr.style.display = (okCap && okKw) ? '' : 'none';
+    if(okCap && okKw) {
+        tr.style.display = '';
+        visibleCount++;
+    } else {
+        tr.style.display = 'none';
+    }
   });
+
+  if (visibleCount === 0 && tbody.innerHTML !== '') {
+    const cols = document.querySelector('table thead tr').cells.length;
+    const noResultsRow = tbody.insertRow();
+    noResultsRow.id = 'noResultsRow';
+    const cell = noResultsRow.insertCell();
+    cell.colSpan = cols;
+    cell.className = 'text-center text-gray-500 py-12';
+    cell.textContent = 'No results found.';
+  }
 }
-document.querySelectorAll('input[name="viewType"]').forEach(radio => {
-  radio.addEventListener('change', () => {
-    updateSubSelector();
-    loadAll();
-  });
-});
+document.querySelectorAll('input[name="viewType"]').forEach(radio => { radio.addEventListener('change', () => { updateSubSelector(); loadAll(); }); });
 document.getElementById('subSelector').addEventListener('change', loadAll);
 document.getElementById('modelSel').addEventListener('change', loadAll);
 document.getElementById('searchInput').addEventListener('input', filterRows);
 document.getElementById('capabilityFilter').addEventListener('change', filterRows);
-
 /* init */
 updateSubSelector();
 loadAll();
