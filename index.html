@@ -124,7 +124,8 @@ const GENERATOR_SETS = {
   'qwn': 'Qwen2.5-VL-72B', 
   'gpt': 'GPT-4o', 
   'gpt4.1': 'GPT4.1',
-  'g4omni': 'GPT-4o-mini'
+  'g4omni': 'GPT-4o-mini',
+  'internvl3': 'InternVL3-78B',
 };
 const GENERATOR_VARIANTS = {
   'cla': ['cla', 'clatxt', 'clathink'], 
@@ -133,7 +134,8 @@ const GENERATOR_VARIANTS = {
   'qwn': ['qwn'], 
   'gpt': ['gpt'], 
   'gpt4.1': ['gpt4.1', 'gpt4.1txt', 'gpt4.1yolo'],
-  'g4omni': ['g4omni', 'g4omnitxt']
+  'g4omni': ['g4omni', 'g4omnitxt'],
+  'internvl3': ['internvl3']
 };
 const PRED_SET   = {
   '7B': {orig:'prediction/qwen7b/pred_original.json', cla:'prediction/qwen7b/pred_claude.json', gem:'prediction/qwen7b/pred_gemini.json', qwn:'prediction/qwen7b/pred_qwen.json', gpt:'prediction/qwen7b/pred_gpt.json'},
@@ -155,6 +157,7 @@ const PRED_SET   = {
     'g4omnitxt':'prediction/gpt4o-mini/pred_g4omini_from_text.json',
     'gpt4.1yolo': 'prediction/gpt4o-mini/pred_gpt4.1_yolo.json',
     'clathink':'prediction/gpt4o-mini/pred_claude_thinking.json',
+    'internvl3':'prediction/gpt4o-mini/pred_internvl3.json',
   }
 };
 const SCORE_SET  = {
@@ -177,6 +180,7 @@ const SCORE_SET  = {
     'g4omnitxt':'score/gpt4o-mini/score_g4omini_from_text.json',
     'gpt4.1yolo': 'score/gpt4o-mini/score_gpt4.1_yolo.json',
     'clathink':'score/gpt4o-mini/score_claude_thinking.json',
+    'internvl3':'score/gpt4o-mini/score_internvl3.json',
   }
 };
 const IMG_DIR = {
@@ -196,6 +200,7 @@ const IMG_DIR = {
   'g4omnitxt':'images_g4omini_from_text/',
   'gpt4.1yolo': 'images_gpt4.1_yolo/',
   'clathink':'images_claude_thinking/',
+  'internvl3':'images_internvl3/',
 };
 const fetchJSON = p => fetch(p).then(r=>r.json()).catch(()=>({}));
 
@@ -277,7 +282,7 @@ function render(meta, preds, scores){
   let syntheticTypes = [];
 
   const variantsByMethod = {
-    'img2svg': ['cla', 'gem', 'qwn', 'gpt', 'gpt4.1', 'claS', 'g4omni'], 
+    'img2svg': ['cla', 'gem', 'qwn', 'gpt', 'gpt4.1', 'claS', 'g4omni','internvl3'], 
     'img2text2svg': ['clatxt', 'gpt4.1txt', 'claStxt', 'g4omnitxt'],
     'img2svg-thinking': ['clathink', 'claSthink'],
     'img+yolo2svg': ['gpt4.1yolo']
