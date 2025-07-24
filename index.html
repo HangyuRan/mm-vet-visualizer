@@ -39,6 +39,28 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+  /* --- 在这里新增下面的代码 --- */
+  .tab-button {
+    padding: 8px 16px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    color: #6b7280;
+    font-weight: 500;
+  }
+  .tab-button.active {
+    color: #4f46e5;
+    border-bottom-color: #4f46e5;
+  }
+  .tab-content {
+    display: none;
+    padding-top: 1rem;
+  }
+  .tab-content.active {
+    display: block;
+  }
+  /* --- 新增代码结束 --- */
+
 </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -132,11 +154,33 @@ const GENERATOR_VARIANTS = {
   'claS': ['claS', 'claStxt', 'claSthink'],
   'gem': ['gem'], 
   'qwn': ['qwn'], 
-  'gpt': ['gpt'], 
+  'gpt': ['gpt', 'gpttxt'], 
   'gpt4.1': ['gpt4.1', 'gpt4.1txt', 'gpt4.1yolo'],
   'g4omni': ['g4omni', 'g4omnitxt'],
   'internvl3': ['internvl3']
 };
+
+// --- 在这里新增下面的代码 ---
+
+
+// 中间文本的配置，只包含最终文件名
+const TEXT_SET = {
+    'clatxt': 'text/claude_from_text.json',
+    'clathink': 'text/claude_thinking.json',
+    'claStxt': 'text/claude_sonnet_from_text.json',
+    'claSthink': 'text/claude_sonnet_thinking.json',
+    'gpt4.1txt': 'text/gpt4.1_from_text.json',
+    'g4omnitxt': 'text/gpt4o_mini_from_text.json',
+    'gpttxt': 'text/gpt4o_from_text.json'
+};
+
+// --- 新增代码结束 ---
+
+
+
+
+
+
 const PRED_SET   = {
   '7B': {orig:'prediction/qwen7b/pred_original.json', cla:'prediction/qwen7b/pred_claude.json', gem:'prediction/qwen7b/pred_gemini.json', qwn:'prediction/qwen7b/pred_qwen.json', gpt:'prediction/qwen7b/pred_gpt.json'},
   '3B': {orig:'prediction/qwen3b/pred_original.json', cla:'prediction/qwen3b/pred_claude.json', gem:'prediction/qwen3b/pred_gemini.json', qwn:'prediction/qwen3b/pred_qwen.json', gpt:'prediction/qwen3b/pred_gpt.json'},
@@ -158,6 +202,7 @@ const PRED_SET   = {
     'gpt4.1yolo': 'prediction/gpt4o-mini/pred_gpt4.1_yolo.json',
     'clathink':'prediction/gpt4o-mini/pred_claude_thinking.json',
     'internvl3':'prediction/gpt4o-mini/pred_internvl3.json',
+    'gpttxt': 'prediction/gpt4o-mini/pred_gpt_from_text.json' // 新增
   }
 };
 const SCORE_SET  = {
@@ -181,6 +226,7 @@ const SCORE_SET  = {
     'gpt4.1yolo': 'score/gpt4o-mini/score_gpt4.1_yolo.json',
     'clathink':'score/gpt4o-mini/score_claude_thinking.json',
     'internvl3':'score/gpt4o-mini/score_internvl3.json',
+    'gpttxt': 'score/gpt4o-mini/score_gpt_from_text.json' // 新增
   }
 };
 const IMG_DIR = {
@@ -201,8 +247,33 @@ const IMG_DIR = {
   'gpt4.1yolo': 'images_gpt4.1_yolo/',
   'clathink':'images_claude_thinking/',
   'internvl3':'images_internvl3/',
+  'gpttxt': 'images_gpt_from_text/' // 新增
 };
 const fetchJSON = p => fetch(p).then(r=>r.json()).catch(()=>({}));
+
+
+// --- 在这里新增下面的代码 ---
+
+// 新增: 标签页模态框的HTML生成器 (完全解耦)
+function createTabbedModalHTML(tabs) {
+    const tabButtons = Object.keys(tabs).map((key, index) => 
+        `<button class="tab-button ${index === 0 ? 'active' : ''}" onclick="switchTab(this, '${key}')">${tabs[key].label}</button>`
+    ).join('');
+    const tabContents = Object.keys(tabs).map((key, index) => 
+        `<div id="tab-${key}" class="tab-content ${index === 0 ? 'active' : ''}">${tabs[key].content}</div>`
+    ).join('');
+    return `<div class="border-b border-gray-200">${tabButtons}</div><div>${tabContents}</div>`;
+}
+// 新增: 标签页切换的JS逻辑 (全局函数)
+function switchTab(button, tabId) {
+    const tabContainer = button.closest('.modal-content');
+    tabContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    tabContainer.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    button.classList.add('active');
+    tabContainer.querySelector(`#tab-${tabId}`).classList.add('active');
+}
+// --- 新增代码结束 ---
+
 
 /* ========== MODAL & BUILD CELLS (无修改) ========== */
 // ... (此部分代码无变化)
@@ -232,13 +303,36 @@ function scoreCell(score, pred){
   else td.classList.add('text-gray-400');
   return td;
 }
-function imgCell(src){
-  const td = document.createElement('td');
-  td.className = 'p-1.5';
-  td.innerHTML = `<img src="${src}" class="w-24 rounded-md shadow cursor-pointer transition-transform duration-200 hover:scale-105">`;
-  td.firstChild.addEventListener('click', ()=> modal('Image', `<img src='${src}' class='max-w-full h-auto rounded-lg'>`));
-  return td;
+// function imgCell(src){
+//   const td = document.createElement('td');
+//   td.className = 'p-1.5';
+//   td.innerHTML = `<img src="${src}" class="w-24 rounded-md shadow cursor-pointer transition-transform duration-200 hover:scale-105">`;
+//   td.firstChild.addEventListener('click', ()=> modal('Image', `<img src='${src}' class='max-w-full h-auto rounded-lg'>`));
+//   return td;
+// }
+// --- 用下面的代码替换现有的 imgCell 函数 ---
+function imgCell(src, textContent) {
+    const td = document.createElement('td');
+    td.className = 'p-1.5';
+    td.innerHTML = `<img src="${src}" class="w-24 rounded-md shadow cursor-pointer transition-transform duration-200 hover:scale-105">`;
+    
+    // 让点击事件变得智能
+    td.firstChild.addEventListener('click', () => {
+        if (textContent) {
+            // 如果有中间文本，创建标签页模态框
+            const tabs = {
+                image: { label: 'Image', content: `<img src='${src}' class='max-w-full h-auto rounded-lg'>` },
+                text: { label: 'Generation Details', content: `<pre class="whitespace-pre-wrap text-gray-800 bg-gray-50 p-4 rounded-md text-sm">${textContent}</pre>` }
+            };
+            modal('Image Details', createTabbedModalHTML(tabs));
+        } else {
+            // 否则，保持旧的简单模态框
+            modal('Image', `<img src='${src}' class='max-w-full h-auto rounded-lg'>`);
+        }
+    });
+    return td;
 }
+
 
 /* ========== UI & DATA LOGIC ========== */
 function showLoader(show) {
@@ -262,16 +356,131 @@ function updateSubSelector() {
   subSelector.innerHTML = '';
   for (const [key, label] of Object.entries(sourceData)) { subSelector.add(new Option(label, key)); }
 }
+// async function loadAll(){
+//   showLoader(true);
+//   const tag  = document.getElementById('modelSel').value;
+//   const meta = await fetchJSON(DATA_JSON);
+//   const preds  = {}, scores = {};
+//   await Promise.all(Object.entries(PRED_SET[tag]).map(async([k,p])=> preds[k]  = await fetchJSON(p)));
+//   await Promise.all(Object.entries(SCORE_SET[tag]).map(async([k,p])=> scores[k] = await fetchJSON(p)));
+//   render(meta, preds, scores);
+// }
+
+// --- 用下面的代码替换现有的 loadAll 函数 ---
+
 async function loadAll(){
   showLoader(true);
   const tag  = document.getElementById('modelSel').value;
   const meta = await fetchJSON(DATA_JSON);
-  const preds  = {}, scores = {};
+  const preds  = {}, scores = {}, texts = {};
+  
   await Promise.all(Object.entries(PRED_SET[tag]).map(async([k,p])=> preds[k]  = await fetchJSON(p)));
   await Promise.all(Object.entries(SCORE_SET[tag]).map(async([k,p])=> scores[k] = await fetchJSON(p)));
-  render(meta, preds, scores);
+  
+  // 核心修改：加载逻辑现在极其简单
+  const textPromises = Object.entries(TEXT_SET).map(async ([key, path]) => {
+      texts[key] = await fetchJSON(path);
+  });
+  await Promise.all(textPromises);
+  
+  render(meta, preds, scores, texts);
 }
-function render(meta, preds, scores){
+
+// function render(meta, preds, scores){
+//   const thead = document.querySelector('table thead');
+//   const tbody = document.getElementById('dataBody');
+//   const viewType = document.querySelector('input[name="viewType"]:checked').value;
+//   const subKey = document.getElementById('subSelector').value;
+//   tbody.innerHTML='';
+//   let idx=0;
+
+//   let syntheticTypes = [];
+
+//   const variantsByMethod = {
+//     'img2svg': ['cla', 'gem', 'qwn', 'gpt', 'gpt4.1', 'claS', 'g4omni','internvl3'], 
+//     'img2text2svg': ['clatxt', 'gpt4.1txt', 'claStxt', 'g4omnitxt'],
+//     'img2svg-thinking': ['clathink', 'claSthink'],
+//     'img+yolo2svg': ['gpt4.1yolo']
+//   };
+
+//   if (viewType === 'method') { syntheticTypes = variantsByMethod[subKey] || []; } 
+//   else if (viewType === 'gen') { syntheticTypes = GENERATOR_VARIANTS[subKey] || []; }
+  
+//   const availableSynthTypes = syntheticTypes.filter(type => preds[type]);
+//   const imageTypes = ['orig'].concat(availableSynthTypes);
+  
+//   const headerLabels = { 
+//     orig: 'Orig', 
+//     cla: 'Claude', 
+//     clatxt: 'Cla-Txt', 
+//     gem: 'Gemini', 
+//     qwn: 'Qwen72B', 
+//     gpt: 'GPT', 
+//     'gpt4.1': 'GPT4.1', 
+//     'gpt4.1txt': 'GPT4.1-Txt' ,
+//     // 新增的
+//     'claS': 'Cla-Sonnet',
+//     'claStxt': 'Cla-Sonnet-Txt',
+//     'claSthink': 'Cla-Sonnet-Think',
+//     'g4omni': 'GPT4o-mini',
+//     'g4omnitxt': 'GPT4o-mini-Txt',
+//     'gpt4.1yolo': 'GPT4.1-YOLO',
+//     'clathink': 'Claude-Think'
+//   };
+//   const scoreLabels = { 
+//     orig: 'S-Orig', 
+//     cla: 'S-Cla', 
+//     clatxt: 'S-ClaT', 
+//     gem: 'S-Gem', 
+//     qwn: 'S-Qwn', 
+//     gpt: 'S-GPT', 
+//     'gpt4.1': 'S-GPT4.1', 
+//     'gpt4.1txt': 'S-GPT4.1T' ,
+//     // 新增的
+//     'claS': 'S-ClaS',
+//     'claStxt': 'S-ClaST',
+//     'claSthink': 'S-ClaSTh',
+//     'g4omni': 'S-G4o-mini',
+//     'g4omnitxt': 'S-G4o-mini-Txt',
+//     'gpt4.1yolo': 'S-GPT4.1-YOLO',
+//     'clathink': 'S-Cla-Th'
+//   };
+  
+//   // 3. 核心修改: 增加 sticky 定位和背景色
+//   let headerHTML = '<tr>';
+//   const thClasses = 'sticky top-0 z-10 bg-gray-50 border-b border-gray-200 px-3 py-3 text-left text-sm font-medium text-gray-600';
+//   headerHTML += `<th class="${thClasses}">#</th>`;
+//   imageTypes.forEach(key => headerHTML += `<th class="${thClasses}">${headerLabels[key] || key}</th>`);
+//   headerHTML += `<th class="${thClasses}">Question</th><th class="${thClasses}">Answer</th><th class="${thClasses}">Caps</th>`;
+//   imageTypes.forEach(key => headerHTML += `<th class="${thClasses}">${scoreLabels[key] || `S-${key}`}</th>`);
+//   headerHTML += '</tr>';
+//   thead.innerHTML = headerHTML;
+
+//   for(const [id,d] of Object.entries(meta)){
+//     const tr = document.createElement('tr');
+//     tr.dataset.cls = d.capability.join(',');
+//     tr.className = 'hover:bg-gray-50 transition-colors duration-150';
+//     const idxCell = document.createElement('td');
+//     idxCell.className = 'px-3 py-3 text-center text-gray-500';
+//     idxCell.textContent = ++idx;
+//     tr.appendChild(idxCell);
+//     imageTypes.forEach(key=> tr.appendChild(imgCell(IMG_DIR[key]+d.imagename)) );
+//     tr.appendChild(clipCell(d.question,'Question'));
+//     tr.appendChild(clipCell(d.answer,'Answer'));
+//     const capsCell = document.createElement('td');
+//     capsCell.className = 'px-3 py-3 text-gray-700';
+//     capsCell.textContent = d.capability.join(', ');
+//     tr.appendChild(capsCell);
+//     imageTypes.forEach(k=> tr.appendChild( scoreCell(scores[k]?.[id]?.score?.[0], preds[k]?.[id]) ));
+//     tbody.appendChild(tr);
+//   }
+//   filterRows();
+//   showLoader(false);
+// }
+
+
+// --- 用下面的代码替换现有的 render 函数 ---
+function render(meta, preds, scores, texts){
   const thead = document.querySelector('table thead');
   const tbody = document.getElementById('dataBody');
   const viewType = document.querySelector('input[name="viewType"]:checked').value;
@@ -279,59 +488,19 @@ function render(meta, preds, scores){
   tbody.innerHTML='';
   let idx=0;
 
+  const variantsByMethod = { 'img2svg': ['cla', 'gem', 'qwn', 'gpt', 'gpt4.1', 'claS', 'g4omni','internvl3'], 'img2text2svg': ['clatxt', 'gpt4.1txt', 'claStxt', 'g4omnitxt', 'gpttxt'], 'img2svg-thinking': ['clathink', 'claSthink'], 'img+yolo2svg': ['gpt4.1yolo'] };
+
   let syntheticTypes = [];
-
-  const variantsByMethod = {
-    'img2svg': ['cla', 'gem', 'qwn', 'gpt', 'gpt4.1', 'claS', 'g4omni','internvl3'], 
-    'img2text2svg': ['clatxt', 'gpt4.1txt', 'claStxt', 'g4omnitxt'],
-    'img2svg-thinking': ['clathink', 'claSthink'],
-    'img+yolo2svg': ['gpt4.1yolo']
-  };
-
   if (viewType === 'method') { syntheticTypes = variantsByMethod[subKey] || []; } 
   else if (viewType === 'gen') { syntheticTypes = GENERATOR_VARIANTS[subKey] || []; }
   
   const availableSynthTypes = syntheticTypes.filter(type => preds[type]);
   const imageTypes = ['orig'].concat(availableSynthTypes);
   
-  const headerLabels = { 
-    orig: 'Orig', 
-    cla: 'Claude', 
-    clatxt: 'Cla-Txt', 
-    gem: 'Gemini', 
-    qwn: 'Qwen72B', 
-    gpt: 'GPT', 
-    'gpt4.1': 'GPT4.1', 
-    'gpt4.1txt': 'GPT4.1-Txt' ,
-    // 新增的
-    'claS': 'Cla-Sonnet',
-    'claStxt': 'Cla-Sonnet-Txt',
-    'claSthink': 'Cla-Sonnet-Think',
-    'g4omni': 'GPT4o-mini',
-    'g4omnitxt': 'GPT4o-mini-Txt',
-    'gpt4.1yolo': 'GPT4.1-YOLO',
-    'clathink': 'Claude-Think'
-  };
-  const scoreLabels = { 
-    orig: 'S-Orig', 
-    cla: 'S-Cla', 
-    clatxt: 'S-ClaT', 
-    gem: 'S-Gem', 
-    qwn: 'S-Qwn', 
-    gpt: 'S-GPT', 
-    'gpt4.1': 'S-GPT4.1', 
-    'gpt4.1txt': 'S-GPT4.1T' ,
-    // 新增的
-    'claS': 'S-ClaS',
-    'claStxt': 'S-ClaST',
-    'claSthink': 'S-ClaSTh',
-    'g4omni': 'S-G4o-mini',
-    'g4omnitxt': 'S-G4o-mini-Txt',
-    'gpt4.1yolo': 'S-GPT4.1-YOLO',
-    'clathink': 'S-Cla-Th'
-  };
+  // 更新: 确保所有标签都已定义
+  const headerLabels = { orig: 'Orig', cla: 'Claude', clatxt: 'Cla-Txt', gem: 'Gemini', qwn: 'Qwen72B', gpt: 'GPT-4o', 'gpttxt': 'GPT-4o-Txt', 'gpt4.1': 'GPT-4.1', 'gpt4.1txt': 'GPT4.1-Txt' , 'claS': 'Cla-Sonnet', 'claStxt': 'Cla-Sonnet-Txt', 'claSthink': 'Cla-Sonnet-Think', 'g4omni': 'GPT-4o-mini', 'g4omnitxt': 'GPT4o-mini-Txt', 'gpt4.1yolo': 'GPT-4.1-YOLO', 'clathink': 'Claude-Think', 'internvl3': 'InternVL3' };
+  const scoreLabels = { orig: 'S-Orig', cla: 'S-Cla', clatxt: 'S-ClaT', gem: 'S-Gem', qwn: 'S-Qwn', gpt: 'S-GPT','gpttxt': 'S-GPT-Txt', 'gpt4.1': 'S-GPT4.1', 'gpt4.1txt': 'S-GPT4.1T' , 'claS': 'S-ClaS', 'claStxt': 'S-ClaST', 'claSthink': 'S-ClaSTh', 'g4omni': 'S-G4o-mini', 'g4omnitxt': 'S-G4ominiT', 'gpt4.1yolo': 'S-GPT4.1-YOLO', 'clathink': 'S-Cla-Th', 'internvl3': 'S-InternVL3' };
   
-  // 3. 核心修改: 增加 sticky 定位和背景色
   let headerHTML = '<tr>';
   const thClasses = 'sticky top-0 z-10 bg-gray-50 border-b border-gray-200 px-3 py-3 text-left text-sm font-medium text-gray-600';
   headerHTML += `<th class="${thClasses}">#</th>`;
@@ -349,7 +518,11 @@ function render(meta, preds, scores){
     idxCell.className = 'px-3 py-3 text-center text-gray-500';
     idxCell.textContent = ++idx;
     tr.appendChild(idxCell);
-    imageTypes.forEach(key=> tr.appendChild(imgCell(IMG_DIR[key]+d.imagename)) );
+    // 修改：将文本内容传递给imgCell
+    imageTypes.forEach(key=> {
+        const textContent = texts[key] ? texts[key][id] : null;
+        tr.appendChild(imgCell(IMG_DIR[key]+d.imagename, textContent));
+    });
     tr.appendChild(clipCell(d.question,'Question'));
     tr.appendChild(clipCell(d.answer,'Answer'));
     const capsCell = document.createElement('td');
@@ -362,6 +535,9 @@ function render(meta, preds, scores){
   filterRows();
   showLoader(false);
 }
+
+
+
 
 /* ========== FILTER & EVENTS ========== */
 function filterRows(){
