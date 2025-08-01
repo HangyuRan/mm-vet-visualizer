@@ -396,7 +396,7 @@ function render(meta, preds, scores, texts){
   tbody.innerHTML='';
   let idx=0;
 
-  const variantsByMethod = { 'img2svg': ['cla', 'gem', 'qwn', 'gpt', 'gpt4.1', 'claS', 'g4omni','internvl3'], 'img2text2svg': ['clatxt', 'gpt4.1txt', 'claStxt', 'g4omnitxt', 'gpttxt'], 'img2svg-thinking': ['clathink', 'claSthink'], 'img+yolo2svg': ['gpt4.1yolo'], 'img2svg-revision': ['claRev'], 'img2svg-revision-text': ['claRevtxt'] };
+  const variantsByMethod = { 'img2svg': ['cla', 'gem', 'qwn', 'gpt', 'gpt4.1', 'claS', 'g4omni','internvl3', 'seed1.6', 'seed1.6txt'], 'img2text2svg': ['clatxt', 'gpt4.1txt', 'claStxt', 'g4omnitxt', 'gpttxt'], 'img2svg-thinking': ['clathink', 'claSthink'], 'img+yolo2svg': ['gpt4.1yolo'], 'img2svg-revision': ['claRev'], 'img2svg-revision-text': ['claRevtxt'] };
 
   let syntheticTypes = [];
   if (viewType === 'method') { syntheticTypes = variantsByMethod[subKey] || []; } 
