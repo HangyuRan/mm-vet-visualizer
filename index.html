@@ -142,6 +142,7 @@ const METHOD_SETS = {
   'img2svg-revision-text': 'Img2SVG-revision-text',
   'img2svg-gsam': 'Img2SVG-GSAM',
   'img2svg-hint': 'Img2SVG-hint',
+  'img2svg-hint-revision': 'Img2SVG-hint-revision',
 };
 
 const GENERATOR_SETS = {
@@ -156,7 +157,7 @@ const GENERATOR_SETS = {
   'seed1.6': 'Seed 1.6 Thinking',
 };
 const GENERATOR_VARIANTS = {
-  'cla': ['cla', 'clatxt', 'clathink','claRev','claRevtxt','clagsam', 'clahint'], 
+  'cla': ['cla', 'clatxt', 'clathink','claRev','claRevtxt','clagsam', 'clahint', 'clahintRev'], 
   'claS': ['claS', 'claStxt', 'claSthink'],
   'gem': ['gem'], 
   'qwn': ['qwn'], 
@@ -217,7 +218,8 @@ const PRED_SET   = {
     'claRevtxt': 'prediction/gpt4o-mini/pred_claude_revision_from_text.json',
     'gpt4.1yolo_v8': 'prediction/gpt4o-mini/pred_gpt4.1_yolo_v8.json',
     'clagsam': 'prediction/gpt4o-mini/pred_claude_gsam.json',
-    'clahint': 'prediction/gpt4o-mini/pred_claude_hint.json' // 新增
+    'clahint': 'prediction/gpt4o-mini/pred_claude_hint.json',
+    'clahintRev': 'prediction/gpt4o-mini/pred_claude_hint_revision.json',
   }
 };
 const SCORE_SET  = {
@@ -248,7 +250,8 @@ const SCORE_SET  = {
     'claRevtxt': 'score/gpt4o-mini/score_claude_revision_from_text.json',
     'gpt4.1yolo_v8': 'score/gpt4o-mini/score_gpt4.1_yolo_v8.json',
     'clagsam': 'score/gpt4o-mini/score_claude_gsam.json',
-    'clahint': 'score/gpt4o-mini/score_claude_hint.json' // 新增
+    'clahint': 'score/gpt4o-mini/score_claude_hint.json',
+    'clahintRev': 'score/gpt4o-mini/score_claude_hint_revision.json',
   }
 };
 const IMG_DIR = {
@@ -277,7 +280,8 @@ const IMG_DIR = {
   'claRevtxt': 'images_claude_revision_from_text/',
   'gpt4.1yolo_v8': 'images_gpt4.1_yolo_v8_vis/',
   'clagsam': 'images_claude_gsam/',
-  'clahint': 'images_claude_hint/' // 新增
+  'clahint': 'images_claude_hint/',
+  'clahintRev': 'images_claude_hint_revision/',
 };
 const fetchJSON = p => fetch(p).then(r=>r.json()).catch(()=>({}));
 
@@ -407,7 +411,7 @@ function render(meta, preds, scores, texts){
   tbody.innerHTML='';
   let idx=0;
 
-  const variantsByMethod = { 'img2svg': ['cla', 'gem', 'qwn', 'gpt', 'gpt4.1', 'claS', 'g4omni','internvl3', 'seed1.6'], 'img2text2svg': ['clatxt', 'gpt4.1txt', 'claStxt', 'g4omnitxt', 'gpttxt', 'seed1.6txt'], 'img2svg-thinking': ['clathink', 'claSthink'], 'img+yolo2svg': ['gpt4.1yolo', 'gpt4.1yolo_v8'], 'img2svg-revision': ['claRev'], 'img2svg-revision-text': ['claRevtxt'],'img2svg-gsam': ['clagsam'], 'img2svg-hint': ['clahint'] };
+  const variantsByMethod = { 'img2svg': ['cla', 'gem', 'qwn', 'gpt', 'gpt4.1', 'claS', 'g4omni','internvl3', 'seed1.6'], 'img2text2svg': ['clatxt', 'gpt4.1txt', 'claStxt', 'g4omnitxt', 'gpttxt', 'seed1.6txt'], 'img2svg-thinking': ['clathink', 'claSthink'], 'img+yolo2svg': ['gpt4.1yolo', 'gpt4.1yolo_v8'], 'img2svg-revision': ['claRev'], 'img2svg-revision-text': ['claRevtxt'],'img2svg-gsam': ['clagsam'], 'img2svg-hint': ['clahint'], 'img2svg-hint-revision': ['clahintRev'] };
 
   let syntheticTypes = [];
   if (viewType === 'method') { syntheticTypes = variantsByMethod[subKey] || []; } 
@@ -417,8 +421,8 @@ function render(meta, preds, scores, texts){
   const imageTypes = ['orig'].concat(availableSynthTypes);
   
   // 更新: 确保所有标签都已定义
-  const headerLabels = { orig: 'Orig', cla: 'Claude', clatxt: 'Cla-Txt', gem: 'Gemini', qwn: 'Qwen72B', gpt: 'GPT-4o', 'gpttxt': 'GPT-4o-Txt', 'gpt4.1': 'GPT-4.1', 'gpt4.1txt': 'GPT4.1-Txt' , 'claS': 'Cla-Sonnet', 'claStxt': 'Cla-Sonnet-Txt', 'claSthink': 'Cla-Sonnet-Think', 'g4omni': 'GPT-4o-mini', 'g4omnitxt': 'GPT4o-mini-Txt', 'gpt4.1yolo': 'GPT-4.1-YOLO','gpt4.1yolo_v8': 'GPT-4.1-YOLO-new', 'clathink': 'Claude-Think', 'internvl3': 'InternVL3', 'seed1.6': 'Seed1.6', 'seed1.6txt': 'Seed1.6-Txt', 'claRev': 'Cla-Rev', 'claRevtxt': 'Cla-Rev-Txt','clagsam': 'Cla-GSAM', 'clahint': 'Cla-Hint' };
-  const scoreLabels = { orig: 'S-Orig', cla: 'S-Cla', clatxt: 'S-ClaT', gem: 'S-Gem', qwn: 'S-Qwn', gpt: 'S-GPT','gpttxt': 'S-GPT-Txt', 'gpt4.1': 'S-GPT4.1', 'gpt4.1txt': 'S-GPT4.1T' , 'claS': 'S-ClaS', 'claStxt': 'S-ClaST', 'claSthink': 'S-ClaSTh', 'g4omni': 'S-G4o-mini', 'g4omnitxt': 'S-G4ominiT', 'gpt4.1yolo': 'S-GPT4.1-YOLO', 'gpt4.1yolo_v8': 'S-GPT4.1-YOLO-new','clathink': 'S-Cla-Th', 'internvl3': 'S-InternVL3', 'seed1.6': 'S-Seed', 'seed1.6txt': 'S-SeedT', 'claRev': 'S-ClaR', 'claRevtxt': 'S-ClaRev-Txt', 'clagsam': 'S-ClaGSAM', 'clahint': 'S-ClaHint' };
+  const headerLabels = { orig: 'Orig', cla: 'Claude', clatxt: 'Cla-Txt', gem: 'Gemini', qwn: 'Qwen72B', gpt: 'GPT-4o', 'gpttxt': 'GPT-4o-Txt', 'gpt4.1': 'GPT-4.1', 'gpt4.1txt': 'GPT4.1-Txt' , 'claS': 'Cla-Sonnet', 'claStxt': 'Cla-Sonnet-Txt', 'claSthink': 'Cla-Sonnet-Think', 'g4omni': 'GPT-4o-mini', 'g4omnitxt': 'GPT4o-mini-Txt', 'gpt4.1yolo': 'GPT-4.1-YOLO','gpt4.1yolo_v8': 'GPT-4.1-YOLO-new', 'clathink': 'Claude-Think', 'internvl3': 'InternVL3', 'seed1.6': 'Seed1.6', 'seed1.6txt': 'Seed1.6-Txt', 'claRev': 'Cla-Rev', 'claRevtxt': 'Cla-Rev-Txt','clagsam': 'Cla-GSAM', 'clahint': 'Cla-Hint', 'clahintRev': 'Cla-Hint-Rev' };
+  const scoreLabels = { orig: 'S-Orig', cla: 'S-Cla', clatxt: 'S-ClaT', gem: 'S-Gem', qwn: 'S-Qwn', gpt: 'S-GPT','gpttxt': 'S-GPT-Txt', 'gpt4.1': 'S-GPT4.1', 'gpt4.1txt': 'S-GPT4.1T' , 'claS': 'S-ClaS', 'claStxt': 'S-ClaST', 'claSthink': 'S-ClaSTh', 'g4omni': 'S-G4o-mini', 'g4omnitxt': 'S-G4ominiT', 'gpt4.1yolo': 'S-GPT4.1-YOLO', 'gpt4.1yolo_v8': 'S-GPT4.1-YOLO-new','clathink': 'S-Cla-Th', 'internvl3': 'S-InternVL3', 'seed1.6': 'S-Seed', 'seed1.6txt': 'S-SeedT', 'claRev': 'S-ClaR', 'claRevtxt': 'S-ClaRev-Txt', 'clagsam': 'S-ClaGSAM', 'clahint': 'S-ClaHint', 'clahintRev': 'S-ClaHintR' };
   
   let headerHTML = '<tr>';
   const thClasses = 'sticky top-0 z-10 bg-gray-50 border-b border-gray-200 px-3 py-3 text-left text-sm font-medium text-gray-600';
