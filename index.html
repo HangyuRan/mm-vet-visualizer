@@ -145,6 +145,8 @@ const METHOD_SETS = {
   'img2svg-hint-revision': 'Img2SVG-hint-revision',
   'img2svg-ocr': 'Img2SVG-OCR',
   'img2svg-florence': 'Img2SVG-from-Florence',
+  'img2svg-all-in-one': 'Img2SVG-all-in-one',
+  'img2svg-all-in-one-revision': 'Img2SVG-all-in-one-revision',
 };
 
 const GENERATOR_SETS = {
@@ -160,7 +162,7 @@ const GENERATOR_SETS = {
   'gpt5': 'GPT-5',
 };
 const GENERATOR_VARIANTS = {
-  'cla': ['cla', 'clatxt', 'clathink','claRev','claRevtxt','clagsam', 'clahint', 'clahintRev', 'claocr','claflorence'], 
+  'cla': ['cla', 'clatxt', 'clathink','claRev','claRevtxt','clagsam', 'clahint', 'clahintRev', 'claocr','claflorence', 'claallinone', 'claallinonerev'], 
   'claS': ['claS', 'claStxt', 'claSthink'],
   'gem': ['gem'], 
   'qwn': ['qwn'], 
@@ -228,7 +230,9 @@ const PRED_SET   = {
     'claocr': 'prediction/gpt4o-mini/pred_claude_ocr.json',
     'gpt5': 'prediction/gpt4o-mini/pred_gpt5.json',
     'gpt5txt': 'prediction/gpt4o-mini/pred_gpt5_from_text.json',
-    'claflorence': 'prediction/gpt4o-mini/pred_claude_florence.json'
+    'claflorence': 'prediction/gpt4o-mini/pred_claude_florence.json',
+    'claallinone': 'prediction/gpt4o-mini/pred_claude_all_in_one.json',
+    'claallinonerev': 'prediction/gpt4o-mini/pred_claude_all_in_one_revision.json'
   }
 };
 const SCORE_SET  = {
@@ -264,7 +268,9 @@ const SCORE_SET  = {
     'claocr': 'score/gpt4o-mini/score_claude_ocr.json',
     'gpt5': 'score/gpt4o-mini/score_gpt5.json',
     'gpt5txt': 'score/gpt4o-mini/score_gpt5_from_text.json',
-    'claflorence': 'score/gpt4o-mini/score_claude_florence.json'
+    'claflorence': 'score/gpt4o-mini/score_claude_florence.json',
+    'claallinone': 'score/gpt4o-mini/score_claude_all_in_one.json',
+    'claallinonerev': 'score/gpt4o-mini/score_claude_all_in_one_revision.json'
   }
 };
 const IMG_DIR = {
@@ -299,6 +305,8 @@ const IMG_DIR = {
   'gpt5': 'images_gpt5/',
   'gpt5txt': 'images_gpt5_from_text/',
   'claflorence': 'images_claude_florence/',
+  'claallinone': 'images_claude_all_in_one/',
+  'claallinonerev': 'images_claude_all_in_one_revision/',
 };
 const fetchJSON = p => fetch(p).then(r=>r.json()).catch(()=>({}));
 
@@ -428,7 +436,7 @@ function render(meta, preds, scores, texts){
   tbody.innerHTML='';
   let idx=0;
 
-  const variantsByMethod = { 'img2svg': ['cla', 'gem', 'qwn', 'gpt', 'gpt4.1', 'claS', 'g4omni','internvl3', 'seed1.6', 'gpt5'], 'img2text2svg': ['clatxt', 'gpt4.1txt', 'claStxt', 'g4omnitxt', 'gpttxt', 'seed1.6txt', 'gpt5txt'], 'img2svg-thinking': ['clathink', 'claSthink'], 'img+yolo2svg': ['gpt4.1yolo', 'gpt4.1yolo_v8'], 'img2svg-revision': ['claRev'], 'img2svg-revision-text': ['claRevtxt'],'img2svg-gsam': ['clagsam'], 'img2svg-hint': ['clahint'], 'img2svg-hint-revision': ['clahintRev'], 'img2svg-ocr': ['claocr'], 'img2svg-florence': ['claflorence'] };
+  const variantsByMethod = { 'img2svg': ['cla', 'gem', 'qwn', 'gpt', 'gpt4.1', 'claS', 'g4omni','internvl3', 'seed1.6', 'gpt5'], 'img2text2svg': ['clatxt', 'gpt4.1txt', 'claStxt', 'g4omnitxt', 'gpttxt', 'seed1.6txt', 'gpt5txt'], 'img2svg-thinking': ['clathink', 'claSthink'], 'img+yolo2svg': ['gpt4.1yolo', 'gpt4.1yolo_v8'], 'img2svg-revision': ['claRev'], 'img2svg-revision-text': ['claRevtxt'],'img2svg-gsam': ['clagsam'], 'img2svg-hint': ['clahint'], 'img2svg-hint-revision': ['clahintRev'], 'img2svg-ocr': ['claocr'], 'img2svg-florence': ['claflorence'], 'img2svg-all-in-one': ['claallinone'], 'img2svg-all-in-one-revision': ['claallinonerev'] };
 
   let syntheticTypes = [];
   if (viewType === 'method') { syntheticTypes = variantsByMethod[subKey] || []; } 
@@ -438,8 +446,8 @@ function render(meta, preds, scores, texts){
   const imageTypes = ['orig'].concat(availableSynthTypes);
   
   // 更新: 确保所有标签都已定义
-  const headerLabels = { orig: 'Orig', cla: 'Claude', clatxt: 'Cla-Txt', gem: 'Gemini', qwn: 'Qwen72B', gpt: 'GPT-4o', 'gpttxt': 'GPT-4o-Txt', 'gpt4.1': 'GPT-4.1', 'gpt4.1txt': 'GPT4.1-Txt' , 'claS': 'Cla-Sonnet', 'claStxt': 'Cla-Sonnet-Txt', 'claSthink': 'Cla-Sonnet-Think', 'g4omni': 'GPT-4o-mini', 'g4omnitxt': 'GPT4o-mini-Txt', 'gpt4.1yolo': 'GPT-4.1-YOLO','gpt4.1yolo_v8': 'GPT-4.1-YOLO-new', 'clathink': 'Claude-Think', 'internvl3': 'InternVL3', 'seed1.6': 'Seed1.6', 'seed1.6txt': 'Seed1.6-Txt', 'claRev': 'Cla-Rev', 'claRevtxt': 'Cla-Rev-Txt','clagsam': 'Cla-GSAM', 'clahint': 'Cla-Hint', 'clahintRev': 'Cla-Hint-Rev', 'claocr': 'Cla-OCR', 'gpt5': 'GPT-5', 'gpt5txt': 'GPT-5-Txt', 'claflorence': 'Cla-Florence' };
-  const scoreLabels = { orig: 'S-Orig', cla: 'S-Cla', clatxt: 'S-ClaT', gem: 'S-Gem', qwn: 'S-Qwn', gpt: 'S-GPT','gpttxt': 'S-GPT-Txt', 'gpt4.1': 'S-GPT4.1', 'gpt4.1txt': 'S-GPT4.1T' , 'claS': 'S-ClaS', 'claStxt': 'S-ClaST', 'claSthink': 'S-ClaSTh', 'g4omni': 'S-G4o-mini', 'g4omnitxt': 'S-G4ominiT', 'gpt4.1yolo': 'S-GPT4.1-YOLO', 'gpt4.1yolo_v8': 'S-GPT4.1-YOLO-new','clathink': 'S-Cla-Th', 'internvl3': 'S-InternVL3', 'seed1.6': 'S-Seed', 'seed1.6txt': 'S-SeedT', 'claRev': 'S-ClaR', 'claRevtxt': 'S-ClaRev-Txt', 'clagsam': 'S-ClaGSAM', 'clahint': 'S-ClaHint', 'clahintRev': 'S-ClaHintR', 'claocr': 'S-ClaOCR', 'gpt5': 'S-GPT5', 'gpt5txt': 'S-GPT5-Txt', 'claflorence': 'S-ClaFlorence' };
+  const headerLabels = { orig: 'Orig', cla: 'Claude', clatxt: 'Cla-Txt', gem: 'Gemini', qwn: 'Qwen72B', gpt: 'GPT-4o', 'gpttxt': 'GPT-4o-Txt', 'gpt4.1': 'GPT-4.1', 'gpt4.1txt': 'GPT4.1-Txt' , 'claS': 'Cla-Sonnet', 'claStxt': 'Cla-Sonnet-Txt', 'claSthink': 'Cla-Sonnet-Think', 'g4omni': 'GPT-4o-mini', 'g4omnitxt': 'GPT4o-mini-Txt', 'gpt4.1yolo': 'GPT-4.1-YOLO','gpt4.1yolo_v8': 'GPT-4.1-YOLO-new', 'clathink': 'Claude-Think', 'internvl3': 'InternVL3', 'seed1.6': 'Seed1.6', 'seed1.6txt': 'Seed1.6-Txt', 'claRev': 'Cla-Rev', 'claRevtxt': 'Cla-Rev-Txt','clagsam': 'Cla-GSAM', 'clahint': 'Cla-Hint', 'clahintRev': 'Cla-Hint-Rev', 'claocr': 'Cla-OCR', 'gpt5': 'GPT-5', 'gpt5txt': 'GPT-5-Txt', 'claflorence': 'Cla-Florence', 'claallinone': 'Cla-All-in-One', 'claallinonerev': 'Cla-All-in-One-Rev' };
+  const scoreLabels = { orig: 'S-Orig', cla: 'S-Cla', clatxt: 'S-ClaT', gem: 'S-Gem', qwn: 'S-Qwn', gpt: 'S-GPT','gpttxt': 'S-GPT-Txt', 'gpt4.1': 'S-GPT4.1', 'gpt4.1txt': 'S-GPT4.1T' , 'claS': 'S-ClaS', 'claStxt': 'S-ClaST', 'claSthink': 'S-ClaSTh', 'g4omni': 'S-G4o-mini', 'g4omnitxt': 'S-G4ominiT', 'gpt4.1yolo': 'S-GPT4.1-YOLO', 'gpt4.1yolo_v8': 'S-GPT4.1-YOLO-new','clathink': 'S-Cla-Th', 'internvl3': 'S-InternVL3', 'seed1.6': 'S-Seed', 'seed1.6txt': 'S-SeedT', 'claRev': 'S-ClaR', 'claRevtxt': 'S-ClaRev-Txt', 'clagsam': 'S-ClaGSAM', 'clahint': 'S-ClaHint', 'clahintRev': 'S-ClaHintR', 'claocr': 'S-ClaOCR', 'gpt5': 'S-GPT5', 'gpt5txt': 'S-GPT5-Txt', 'claflorence': 'S-ClaFlorence', 'claallinone': 'S-ClaAllinOne', 'claallinonerev': 'S-ClaAllinOneRev' };
   
   let headerHTML = '<tr>';
   const thClasses = 'sticky top-0 z-10 bg-gray-50 border-b border-gray-200 px-3 py-3 text-left text-sm font-medium text-gray-600';
